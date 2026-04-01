@@ -211,7 +211,7 @@ export default function OverviewPage() {
               <p className="text-[14px] text-[#1c1917] font-medium mb-2">Run the CLI once to generate bones</p>
               <div className="relative rounded-lg border border-stone-200 bg-[#1a1a1a] p-4 font-mono text-[13px] leading-relaxed">
                 <CopyButton text="npx boneyard-js build" />
-                <span className="text-[#a78bfa]">npx</span><span className="text-stone-300"> boneyard build</span>
+                <span className="text-[#a78bfa]">npx</span><span className="text-stone-300"> boneyard-js build</span>
               </div>
               <p className="text-[13px] text-[#78716c] mt-2">
                 Auto-detects your running dev server. Visits at 375px, 768px, 1280px. Writes responsive JSON to <code className="text-[13px] bg-stone-100 px-1 py-0.5 rounded">src/bones/</code> automatically.

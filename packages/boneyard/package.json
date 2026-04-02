@@ -1,6 +1,6 @@
 {
   "name": "boneyard-js",
-  "version": "1.0.2",
+  "version": "1.3.2",
   "description": "Pixel-perfect skeleton loading screens. Wrap your component in <Skeleton> and boneyard snapshots the real DOM layout — no manual descriptors, no configuration.",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
     }
   },
   "bin": {
-    "boneyard": "bin/cli.js"
+    "boneyard-js": "bin/cli.js"
   },
   "files": [
     "dist",

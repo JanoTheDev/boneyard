@@ -39,14 +39,25 @@ function resolveResponsive(
 }
 
 /** Mix a hex color toward white by `amount` (0–1). */
-function lightenHex(hex: string, amount: number): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  const nr = Math.round(r + (255 - r) * amount)
-  const ng = Math.round(g + (255 - g) * amount)
-  const nb = Math.round(b + (255 - b) * amount)
-  return `#${nr.toString(16).padStart(2, '0')}${ng.toString(16).padStart(2, '0')}${nb.toString(16).padStart(2, '0')}`
+function adjustColor(color: string, amount: number): string {
+  // Handle rgba
+  const rgbaMatch = color.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+))?\s*\)/)
+  if (rgbaMatch) {
+    const [, r, g, b, a = '1'] = rgbaMatch
+    const newAlpha = Math.min(1, parseFloat(a) + amount * 0.5)
+    return `rgba(${r},${g},${b},${newAlpha.toFixed(3)})`
+  }
+  // Handle hex
+  if (color.startsWith('#')) {
+    const r = parseInt(color.slice(1, 3), 16)
+    const g = parseInt(color.slice(3, 5), 16)
+    const b = parseInt(color.slice(5, 7), 16)
+    const nr = Math.round(r + (255 - r) * amount)
+    const ng = Math.round(g + (255 - g) * amount)
+    const nb = Math.round(b + (255 - b) * amount)
+    return `#${nr.toString(16).padStart(2, '0')}${ng.toString(16).padStart(2, '0')}${nb.toString(16).padStart(2, '0')}`
+  }
+  return color
 }
 
 export interface SkeletonProps {
@@ -63,8 +74,10 @@ export interface SkeletonProps {
    * Pre-generated bones. Accepts a single `SkeletonResult` or a `ResponsiveBones` map.
    */
   initialBones?: SkeletonResult | ResponsiveBones
-  /** Bone color (default: '#e0e0e0') */
+  /** Bone color (default: 'rgba(0,0,0,0.08)', auto-detects dark mode) */
   color?: string
+  /** Bone color for dark mode (default: 'rgba(255,255,255,0.06)'). Used when prefers-color-scheme is dark or a .dark ancestor exists. */
+  darkColor?: string
   /** Enable pulse animation (default: true) */
   animate?: boolean
   /** Additional className for the container */
@@ -98,7 +111,8 @@ export function Skeleton({
   children,
   name,
   initialBones,
-  color = '#e0e0e0',
+  color,
+  darkColor,
   animate = true,
   className,
   fallback,
@@ -107,8 +121,33 @@ export function Skeleton({
 }: SkeletonProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
+  const [isDark, setIsDark] = useState(false)
 
   const isBuildMode = typeof window !== 'undefined' && (window as any).__BONEYARD_BUILD === true
+
+  // Auto-detect dark mode (watches both prefers-color-scheme and .dark class)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const checkDark = () => {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)')
+      const hasDarkClass = document.documentElement.classList.contains('dark') ||
+        !!containerRef.current?.closest('.dark')
+      setIsDark(mq.matches || hasDarkClass)
+    }
+    checkDark()
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const mqHandler = () => checkDark()
+    mq.addEventListener('change', mqHandler)
+    // Watch for .dark class changes on <html>
+    const mo = new MutationObserver(checkDark)
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => {
+      mq.removeEventListener('change', mqHandler)
+      mo.disconnect()
+    }
+  }, [])
+
+  const resolvedColor = isDark ? (darkColor ?? 'rgba(255,255,255,0.06)') : (color ?? 'rgba(0,0,0,0.08)')
 
   // Track container width for responsive breakpoint selection
   useEffect(() => {
@@ -131,11 +170,11 @@ export function Skeleton({
     }
   }
 
-  // Build mode: render fixture so CLI can capture bones from it
-  if (isBuildMode && fixture) {
+  // Build mode: render fixture (if provided) or children so CLI can capture bones
+  if (isBuildMode) {
     return (
       <div ref={containerRef} className={className} style={{ position: 'relative' }} {...dataAttrs}>
-        <div>{fixture}</div>
+        <div>{fixture ?? children}</div>
       </div>
     )
   }
@@ -168,13 +207,13 @@ export function Skeleton({
                   width: b.w,
                   height: b.h,
                   borderRadius: typeof b.r === 'string' ? b.r : `${b.r}px`,
-                  backgroundColor: b.c ? lightenHex(color, 0.45) : color,
+                  backgroundColor: b.c ? adjustColor(resolvedColor, isDark ? 0.03 : 0.45) : resolvedColor,
                   animation: animate ? 'boneyard-pulse 1.8s ease-in-out infinite' : undefined,
                 }}
               />
             ))}
             {animate && (
-              <style>{`@keyframes boneyard-pulse{0%,100%{background-color:${color}}50%{background-color:${lightenHex(color, 0.3)}}}`}</style>
+              <style>{`@keyframes boneyard-pulse{0%,100%{background-color:${resolvedColor}}50%{background-color:${adjustColor(resolvedColor, isDark ? 0.04 : 0.3)}}}`}</style>
             )}
           </div>
         </div>

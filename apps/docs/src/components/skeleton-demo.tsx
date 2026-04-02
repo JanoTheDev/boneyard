@@ -265,18 +265,29 @@ const demoComponents: Record<string, { label: string; description: string; Compo
 type Texture = "solid" | "shimmer" | "pulse";
 
 /** Mix a hex color toward white by `amount` (0–1). */
-function lightenHex(hex: string, amount: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const nr = Math.round(r + (255 - r) * amount);
-  const ng = Math.round(g + (255 - g) * amount);
-  const nb = Math.round(b + (255 - b) * amount);
-  return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
+function lightenHex(color: string, amount: number): string {
+  // Handle rgba
+  const rgbaMatch = color.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+))?\s*\)/);
+  if (rgbaMatch) {
+    const [, r, g, b, a = "1"] = rgbaMatch;
+    const newAlpha = Math.min(1, parseFloat(a) + amount * 0.5);
+    return `rgba(${r},${g},${b},${newAlpha.toFixed(3)})`;
+  }
+  // Handle hex
+  if (color.startsWith("#")) {
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    const nr = Math.round(r + (255 - r) * amount);
+    const ng = Math.round(g + (255 - g) * amount);
+    const nb = Math.round(b + (255 - b) * amount);
+    return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
+  }
+  return color;
 }
 
-function getTextureStyle(texture: Texture, color: string): { className: string; style: React.CSSProperties } {
-  const lighterColor = lightenHex(color, 0.3);
+function getTextureStyle(texture: Texture, color: string, isDark = false): { className: string; style: React.CSSProperties } {
+  const lighterColor = lightenHex(color, isDark ? 0.04 : 0.3);
   switch (texture) {
     case "shimmer":
       return {
@@ -289,7 +300,7 @@ function getTextureStyle(texture: Texture, color: string): { className: string; 
       };
     case "pulse":
       // Pulse animates between color and a lighter shade via CSS color-mix
-      return { className: "bone-pulse", style: { '--bone-color': color, backgroundColor: color } as React.CSSProperties };
+      return { className: "bone-pulse", style: { '--bone-color': color, '--bone-pulse-mix': isDark ? '6%' : '30%', backgroundColor: color } as React.CSSProperties };
     case "solid":
     default:
       return { className: "", style: { background: color } };
@@ -299,20 +310,21 @@ function getTextureStyle(texture: Texture, color: string): { className: string; 
 // ── Skeleton renderer ──
 
 function SkeletonRenderer({
-  bones, height, color, texture,
+  bones, height, color, texture, dark = false,
 }: {
   bones: { x: number; y: number; w: number; h: number; r: number | string; c?: boolean }[];
   height: number;
   color: string;
   texture: Texture;
+  dark?: boolean;
 }) {
   return (
     <div className="relative w-full" style={{ height }}>
       {bones.map((b, i) => {
         const r = typeof b.r === "string" ? b.r : `${b.r}px`;
         // Container bones are lighter so child bones stand out on top
-        const boneColor = b.c ? lightenHex(color, 0.45) : color;
-        const { className, style: textureStyle } = getTextureStyle(texture, boneColor);
+        const boneColor = b.c ? lightenHex(color, dark ? 0.03 : 0.45) : color;
+        const { className, style: textureStyle } = getTextureStyle(texture, boneColor, dark);
         return (
           <div
             key={i}
@@ -336,9 +348,16 @@ function DemoCard({ demoKey, label, description, Component }: { demoKey: string;
   const [skeleton, setSkeleton] = useState<SkeletonResult | null>(null);
 
   // Visual-only controls
-  const [color, setColor] = useState("#d4d4d4");
+  const [color, setColor] = useState("#e0e0e0");
   const [texture, setTexture] = useState<Texture>("pulse");
   const [dark, setDark] = useState(false);
+  const handleDarkToggle = () => {
+    setDark((d) => {
+      const next = !d;
+      setColor(next ? "#2a2a2a" : "#e0e0e0");
+      return next;
+    });
+  };
   const [showJson, setShowJson] = useState(false);
   const [showCode, setShowCode] = useState(true);
 
@@ -406,11 +425,9 @@ function DemoCard({ demoKey, label, description, Component }: { demoKey: string;
         {/* Left: Real UI */}
         <div>
           <div className="text-[10px] font-mono text-stone-400 uppercase tracking-wider mb-1.5 px-1">Real UI</div>
-          <div className={`rounded-xl border p-4 overflow-hidden transition-colors duration-200 ${dark ? "bg-[#1c1917] border-stone-700" : "bg-white border-stone-200"}`}>
-            <div>
-              <div ref={uiRef}>
-                <Component />
-              </div>
+          <div className={`rounded-xl p-4 overflow-hidden transition-colors duration-200 ${dark ? "bg-[#1A1A1A] [&_*]:text-stone-300 [&_.text-stone-800]:text-stone-200 [&_.text-stone-700]:text-stone-300 [&_.text-stone-600]:text-stone-400 [&_.text-stone-500]:text-stone-400 [&_.text-stone-400]:text-stone-500 [&_.bg-stone-100]:bg-[#2B2B2B] [&_.bg-stone-50]:bg-[#2B2B2B] [&_.bg-stone-300]:bg-stone-600 [&_.bg-stone-900]:bg-stone-200 [&_.bg-stone-900_*]:text-stone-900 [&_.border-stone-100]:border-[#333]" : "bg-white border border-stone-200"}`}>
+            <div ref={uiRef}>
+              <Component />
             </div>
           </div>
         </div>
@@ -423,8 +440,9 @@ function DemoCard({ demoKey, label, description, Component }: { demoKey: string;
               <SkeletonRenderer
                 bones={skeleton.bones}
                 height={skeleton.height}
-                color={dark ? "#292524" : color}
+                color={color}
                 texture={texture}
+                dark={dark}
               />
             ) : (
               <div />
@@ -453,7 +471,7 @@ function DemoCard({ demoKey, label, description, Component }: { demoKey: string;
           <div className="w-px h-4 bg-stone-200 mx-1" />
 
           <button
-            onClick={() => setDark((d) => !d)}
+            onClick={handleDarkToggle}
             className={`h-7 px-2.5 rounded-lg text-[11px] font-medium transition-colors ${
               dark ? "bg-stone-800 text-stone-300" : "bg-stone-100 text-stone-500 hover:bg-stone-200/70"
             }`}

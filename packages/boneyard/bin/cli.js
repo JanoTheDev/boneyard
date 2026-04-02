@@ -177,10 +177,10 @@ try {
 
 // ── Capture ───────────────────────────────────────────────────────────────────
 
-console.log(`\n  boneyard build`)
-console.log(`  URLs:        ${urls.join(', ')}`)
-console.log(`  Breakpoints: ${breakpoints.join(', ')}px`)
-console.log(`  Output:      ${outDir}\n`)
+console.log(`\n  \x1b[1m💀 boneyard build\x1b[0m`)
+console.log(`  \x1b[2m${'─'.repeat(50)}\x1b[0m`)
+console.log(`  \x1b[2mbreakpoints\x1b[0m  ${breakpoints.join(', ')}px`)
+console.log(`  \x1b[2moutput\x1b[0m       ${outDir}\n`)
 
 let browser
 try {
@@ -209,14 +209,20 @@ await page.addInitScript(() => {
 // { [skeletonName]: { breakpoints: { [width]: SkeletonResult } } }
 const collected = {}
 
-for (const url of urls) {
-  console.log(`  Visiting ${url}`)
+// Crawl: discover all internal links starting from the provided URLs
+const visited = new Set()
+const toVisit = [...urls]
+
+async function capturePage(pageUrl) {
+  const pageSkeletons = new Map()
+  const shortPath = pageUrl.replace(new URL(pageUrl).origin, '') || '/'
+  console.log(`  ${shortPath}`)
 
   for (const width of breakpoints) {
     await page.setViewportSize({ width, height: 900 })
 
     try {
-      await page.goto(url, { waitUntil: 'networkidle', timeout: 15_000 })
+      await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 15_000 })
     } catch {
       // networkidle can timeout on heavy pages — still try to capture
     }
@@ -257,8 +263,6 @@ for (const url of urls) {
     const names = Object.keys(bones)
 
     if (names.length === 0) {
-      console.warn(`    ⚠  No <Skeleton name="..."> found at ${width}px`)
-      console.warn(`       Make sure your <Skeleton> has a name prop and a fixture prop`)
       continue
     }
 
@@ -266,9 +270,74 @@ for (const url of urls) {
       collected[name] ??= { breakpoints: {} }
       collected[name].breakpoints[width] = bones[name]
       const boneCount = bones[name].bones?.length ?? 0
-      console.log(`    ✓  ${name} @ ${width}px  (${boneCount} bones)`)
+      if (!pageSkeletons.has(name)) {
+        pageSkeletons.set(name, { counts: [] })
+      }
+      pageSkeletons.get(name).counts.push(boneCount)
     }
   }
+
+  // Print grouped summary for this page
+  if (pageSkeletons.size === 0) {
+    console.log(`    –  No skeletons found`)
+  } else {
+    for (const [name, info] of pageSkeletons) {
+      const min = Math.min(...info.counts)
+      const max = Math.max(...info.counts)
+      const boneStr = min === max
+        ? `${min} bones`
+        : `${min} → ${max} bones (responsive)`
+      console.log(`    ✓  ${name.padEnd(24)} ${boneStr}`)
+    }
+  }
+}
+
+// Discover internal links from a page
+async function discoverLinks(pageUrl) {
+  try {
+    await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 15_000 })
+  } catch {}
+  if (waitMs > 0) await page.waitForTimeout(waitMs)
+
+  const origin = new URL(pageUrl).origin
+  const links = await page.evaluate((orig) => {
+    return [...document.querySelectorAll('a[href]')]
+      .map(a => a.href)
+      .filter(href => href.startsWith(orig))
+      .map(href => {
+        const u = new URL(href)
+        u.hash = ''
+        u.search = ''
+        return u.toString()
+      })
+  }, origin)
+
+  return [...new Set(links)]
+}
+
+// Crawl all pages
+const startUrl = urls[0]
+const startOrigin = new URL(startUrl).origin
+
+console.log(`  \x1b[2mCrawling ${startOrigin}\x1b[0m\n`)
+
+// Discover links from starting URLs
+for (const url of urls) {
+  if (!visited.has(url)) {
+    const links = await discoverLinks(url)
+    for (const link of links) {
+      if (!visited.has(link) && !toVisit.includes(link)) {
+        toVisit.push(link)
+      }
+    }
+  }
+}
+
+// Visit all discovered pages
+for (const pageUrl of toVisit) {
+  if (visited.has(pageUrl)) continue
+  visited.add(pageUrl)
+  await capturePage(pageUrl)
 }
 
 await browser.close()
@@ -287,12 +356,13 @@ if (Object.keys(collected).length === 0) {
 const outputDir = resolve(process.cwd(), outDir)
 mkdirSync(outputDir, { recursive: true })
 
-console.log('')
+console.log(`\n  \x1b[2m${'─'.repeat(50)}\x1b[0m`)
+console.log(`  \x1b[1mWriting files\x1b[0m\n`)
 for (const [name, data] of Object.entries(collected)) {
   const outPath = join(outputDir, `${name}.bones.json`)
   writeFileSync(outPath, JSON.stringify(data, null, 2))
   const bpCount = Object.keys(data.breakpoints).length
-  console.log(`  Wrote  ${outPath}  (${bpCount} breakpoint${bpCount !== 1 ? 's' : ''})`)
+  console.log(`  \x1b[32m→\x1b[0m ${name}.bones.json  \x1b[2m(${bpCount} breakpoint${bpCount !== 1 ? 's' : ''})\x1b[0m`)
 }
 
 // ── Generate registry.js ─────────────────────────────────────────────────────
@@ -317,20 +387,12 @@ registryLines.push('')
 
 const registryPath = join(outputDir, 'registry.js')
 writeFileSync(registryPath, registryLines.join('\n'))
-console.log(`  Wrote  ${registryPath}  (${names.length} skeleton${names.length !== 1 ? 's' : ''})`)
+console.log(`  \x1b[32m→\x1b[0m registry.js  \x1b[2m(${names.length} skeleton${names.length !== 1 ? 's' : ''})\x1b[0m`)
 
 const count = names.length
-console.log(`\n  ✓ ${count} skeleton${count !== 1 ? 's' : ''} captured.\n`)
-
-// Check if this looks like a first-time setup
-const isFirstRun = !existsSync(resolve(outputDir, 'registry.js'))
-console.log(`  Add this once to your app entry point:`)
-console.log(`    import '${outDir}/registry'\n`)
-console.log(`  Then just use:`)
-console.log(`    <Skeleton name="my-component" loading={isLoading}>`)
-console.log(`      <MyComponent />`)
-console.log(`    </Skeleton>\n`)
-console.log(`  No initialBones import needed — boneyard resolves it from the registry.\n`)
+console.log(`\n  \x1b[32m\x1b[1m💀 ${count} skeleton${count !== 1 ? 's' : ''} captured.\x1b[0m\n`)
+console.log(`  \x1b[2mAdd once to your app entry:\x1b[0m  import '${outDir}/registry'`)
+console.log(`  \x1b[2mThen just use:\x1b[0m              <Skeleton name="..." loading={isLoading}>\n`)
 
 
 // ── Help ──────────────────────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Skeleton } from "boneyard-js/react";
+import { snapshotBones } from "boneyard-js";
 import { BrowserMockup } from "@/components/browser-mockup";
 import { CopyIcon } from "@/components/ui/icons/copy";
 import { CheckIcon } from "@/components/ui/icons/check";
@@ -20,8 +22,45 @@ function useGitHubStars() {
   return stars;
 }
 
-// ── Static side-by-side mockup ─────────────────────────────────────────────────
+// ── Dashboard mock UI used as fixture ────────────────────────────────────────
+function DashboardMock() {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center text-white font-bold text-[9px]">A</div>
+        <span className="text-[12px] font-semibold text-stone-800">Acme Dashboard</span>
+      </div>
+      <div className="flex gap-1.5">
+        <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+          <div className="text-[9px] text-emerald-600 font-medium">Revenue</div>
+          <div className="text-[13px] font-bold text-emerald-700">$12.3k</div>
+        </div>
+        <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-2">
+          <div className="text-[9px] text-blue-600 font-medium">Users</div>
+          <div className="text-[13px] font-bold text-blue-700">1,204</div>
+        </div>
+        <div className="flex-1 bg-amber-50 border border-amber-200 rounded-lg p-2">
+          <div className="text-[9px] text-amber-600 font-medium">Orders</div>
+          <div className="text-[13px] font-bold text-amber-700">342</div>
+        </div>
+      </div>
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-lg p-2">
+        <div className="flex items-end gap-[2px] h-[36px]">
+          {[40, 65, 45, 80, 60, 90, 55, 75, 85, 70, 95, 60].map((h, i) => (
+            <div key={i} className="flex-1 bg-indigo-400 rounded-t" style={{ height: `${h}%` }} />
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        {["Alice — $240 — Done", "Bob — $89 — Pending"].map((row, i) => (
+          <div key={i} className="h-5 bg-stone-50 border border-stone-100 rounded flex items-center px-2 text-[9px] text-stone-500 truncate">{row}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
+// ── Live side-by-side demo using real <Skeleton> ─────────────────────────────
 function StaticHeroDemo() {
   return (
     <BrowserMockup url="localhost:3000">
@@ -29,77 +68,25 @@ function StaticHeroDemo() {
         {/* Real UI column */}
         <div>
           <div className="text-[10px] font-medium text-stone-400 uppercase tracking-wide mb-2">Real UI</div>
-          <div className="flex flex-col gap-2">
-            {/* Header row */}
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center text-white font-bold text-[9px]">A</div>
-              <span className="text-[12px] font-semibold text-stone-800">Acme Dashboard</span>
-            </div>
-            {/* Stat cards */}
-            <div className="flex gap-1.5">
-              <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-lg p-2">
-                <div className="text-[9px] text-emerald-600 font-medium">Revenue</div>
-                <div className="text-[13px] font-bold text-emerald-700">$12.3k</div>
-              </div>
-              <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-2">
-                <div className="text-[9px] text-blue-600 font-medium">Users</div>
-                <div className="text-[13px] font-bold text-blue-700">1,204</div>
-              </div>
-              <div className="flex-1 bg-amber-50 border border-amber-200 rounded-lg p-2">
-                <div className="text-[9px] text-amber-600 font-medium">Orders</div>
-                <div className="text-[13px] font-bold text-amber-700">342</div>
-              </div>
-            </div>
-            {/* Chart */}
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-lg p-2">
-              <div className="flex items-end gap-[2px] h-[36px]">
-                {[40, 65, 45, 80, 60, 90, 55, 75, 85, 70, 95, 60].map((h, i) => (
-                  <div key={i} className="flex-1 bg-indigo-400 rounded-t" style={{ height: `${h}%` }} />
-                ))}
-              </div>
-            </div>
-            {/* Activity rows */}
-            <div className="flex flex-col gap-1">
-              {["Alice — $240 — Done", "Bob — $89 — Pending"].map((row, i) => (
-                <div key={i} className="h-5 bg-stone-50 border border-stone-100 rounded flex items-center px-2 text-[9px] text-stone-500 truncate">{row}</div>
-              ))}
-            </div>
-          </div>
+          <Skeleton
+            name="overview-dashboard"
+            loading={false}
+            fixture={<DashboardMock />}
+          >
+            <DashboardMock />
+          </Skeleton>
         </div>
 
-        {/* Skeleton column */}
+        {/* Skeleton column — same component, forced loading */}
         <div>
           <div className="text-[10px] font-medium text-stone-400 uppercase tracking-wide mb-2">Skeleton</div>
-          <div className="flex flex-col gap-2">
-            {/* Header row */}
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-6 h-6 rounded-md bg-stone-200 animate-pulse" />
-              <div className="h-3 w-24 rounded bg-stone-200 animate-pulse" />
-            </div>
-            {/* Stat cards */}
-            <div className="flex gap-1.5">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="flex-1 rounded-lg border border-stone-100 p-2 space-y-1.5">
-                  <div className="h-2 w-8 rounded bg-stone-200 animate-pulse" />
-                  <div className="h-3.5 w-10 rounded bg-stone-200 animate-pulse" />
-                </div>
-              ))}
-            </div>
-            {/* Chart */}
-            <div className="rounded-lg border border-stone-100 p-2">
-              <div className="flex items-end gap-[2px] h-[36px]">
-                {[40, 65, 45, 80, 60, 90, 55, 75, 85, 70, 95, 60].map((h, i) => (
-                  <div key={i} className="flex-1 rounded-t bg-stone-200 animate-pulse" style={{ height: `${h}%` }} />
-                ))}
-              </div>
-            </div>
-            {/* Activity rows */}
-            <div className="flex flex-col gap-1">
-              {[0, 1].map((i) => (
-                <div key={i} className="h-5 rounded border border-stone-100 bg-stone-200 animate-pulse" />
-              ))}
-            </div>
-          </div>
+          <Skeleton
+            name="overview-dashboard"
+            loading={true}
+            fixture={<DashboardMock />}
+          >
+            <DashboardMock />
+          </Skeleton>
         </div>
       </div>
     </BrowserMockup>

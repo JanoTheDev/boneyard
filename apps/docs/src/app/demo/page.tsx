@@ -146,16 +146,17 @@ function useSkeletonCapture() {
 // ── Skeleton wrapper: captures from ref, passes bones to <Skeleton> ──────────
 
 function SkeletonSection({
-  name, loading, bones, setRef, children,
+  name, loading, bones, setRef, children, fixture,
 }: {
   name: string;
   loading: boolean;
   bones: Record<string, SkeletonResult>;
   setRef: (name: string) => (el: HTMLDivElement | null) => void;
   children: React.ReactNode;
+  fixture?: React.ReactNode;
 }) {
   return (
-    <Skeleton loading={loading} initialBones={bones[name]} name={name} color="#d6d3d1">
+    <Skeleton loading={loading} initialBones={bones[name]} name={name} color="#d6d3d1" fixture={fixture}>
       <div ref={setRef(name)}>{children}</div>
     </Skeleton>
   );
@@ -261,7 +262,21 @@ export default function DemoPage() {
               <aside className="w-[220px] shrink-0 bg-white border-r border-stone-200 p-3 flex flex-col gap-4">
                 <div>
                   <div className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-2 px-1">Team</div>
-                  <SkeletonSection name="team" loading={loading} bones={bones} setRef={setRef}>
+                  <SkeletonSection name="sidebar-nav" loading={loading} bones={bones} setRef={setRef}
+                    fixture={
+                      <div className="space-y-1">
+                        {["Dashboard", "Analytics", "Projects", "Team", "Settings"].map((item) => (
+                          <div key={item} className="flex items-center gap-2 px-2 py-1.5 rounded-md">
+                            <div className="w-7 h-7 rounded-full bg-stone-200" />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[12px] font-medium text-stone-700">{item}</div>
+                              <div className="text-[10px] text-stone-400">Navigation link</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    }
+                  >
                     <div className="space-y-1">
                       {users.map((u) => (
                         <div key={u.name} className="flex items-center gap-2 px-2 py-1.5 rounded-md">
@@ -283,7 +298,18 @@ export default function DemoPage() {
 
                 <div>
                   <div className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-2 px-1">Today</div>
-                  <SkeletonSection name="calendar" loading={loading} bones={bones} setRef={setRef}>
+                  <SkeletonSection name="calendar" loading={loading} bones={bones} setRef={setRef}
+                    fixture={
+                      <div className="space-y-1.5">
+                        {calendarEvents.map((e) => (
+                          <div key={e.title} className={`px-2.5 py-1.5 rounded-lg border text-[11px] ${e.color}`}>
+                            <div className="font-medium">{e.title}</div>
+                            <div className="opacity-70 text-[10px]">{e.time}</div>
+                          </div>
+                        ))}
+                      </div>
+                    }
+                  >
                     <div className="space-y-1.5">
                       {calendarEvents.map((e) => (
                         <div key={e.title} className={`px-2.5 py-1.5 rounded-lg border text-[11px] ${e.color}`}>
@@ -297,7 +323,23 @@ export default function DemoPage() {
 
                 <div>
                   <div className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-2 px-1">Chat</div>
-                  <SkeletonSection name="chat" loading={loading} bones={bones} setRef={setRef}>
+                  <SkeletonSection name="chat" loading={loading} bones={bones} setRef={setRef}
+                    fixture={
+                      <div className="space-y-1.5 bg-stone-50 rounded-lg p-2">
+                        {chatMessages.map((m, i) => (
+                          <div key={i} className={`flex ${m.self ? "justify-end" : "justify-start"}`}>
+                            <div className={`px-2 py-1 rounded-lg text-[11px] max-w-[85%] ${
+                              m.self ? "bg-stone-900 text-white" : "bg-white border border-stone-200 text-stone-600"
+                            }`}>{m.text}</div>
+                          </div>
+                        ))}
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="flex-1 text-[11px] bg-white border border-stone-200 rounded-md px-2 py-1 text-stone-300">Type a message...</div>
+                          <div className="w-6 h-6 rounded-md bg-stone-900" />
+                        </div>
+                      </div>
+                    }
+                  >
                     <div className="space-y-1.5 bg-stone-50 rounded-lg p-2">
                       {chatMessages.map((m, i) => (
                         <div key={i} className={`flex ${m.self ? "justify-end" : "justify-start"}`}>
@@ -318,33 +360,58 @@ export default function DemoPage() {
               {/* ── Main content area ── */}
               <div className="flex-1 overflow-hidden p-4 space-y-3">
                 {/* Stats row */}
-                <div className="grid grid-cols-4 gap-2.5">
-                  {[
-                    { label: "Total Revenue", value: "$128.4k", change: "+12.3%", trend: "up" },
-                    { label: "Active Users", value: "24,891", change: "+8.1%", trend: "up" },
-                    { label: "API Calls", value: "1.2M", change: "-2.4%", trend: "down" },
-                    { label: "Error Rate", value: "0.12%", change: "-18%", trend: "up" },
-                  ].map((s) => (
-                    <div key={s.label} className="bg-white rounded-xl border border-stone-200 p-3">
-                      <div className="text-[10px] text-stone-400 font-medium mb-1">{s.label}</div>
-                      <SkeletonSection name={`stat-${s.label}`} loading={loading} bones={bones} setRef={setRef}>
+                <SkeletonSection name="dashboard-stats" loading={loading} bones={bones} setRef={setRef}
+                  fixture={
+                    <div className="grid grid-cols-4 gap-2.5">
+                      {[
+                        { label: "Total Revenue", value: "$128.4k", change: "+12.3%" },
+                        { label: "Active Users", value: "24,891", change: "+8.1%" },
+                        { label: "API Calls", value: "1.2M", change: "-2.4%" },
+                        { label: "Error Rate", value: "0.12%", change: "-18%" },
+                      ].map((s) => (
+                        <div key={s.label} className="bg-white rounded-xl border border-stone-200 p-3">
+                          <div className="text-[10px] text-stone-400 font-medium mb-1">{s.label}</div>
+                          <div>
+                            <div className="text-[20px] font-bold text-stone-800 leading-none">{s.value}</div>
+                            <div className="text-[10px] mt-1 font-medium text-emerald-600">{s.change} vs last month</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  }
+                >
+                  <div className="grid grid-cols-4 gap-2.5">
+                    {[
+                      { label: "Total Revenue", value: "$128.4k", change: "+12.3%", trend: "up" },
+                      { label: "Active Users", value: "24,891", change: "+8.1%", trend: "up" },
+                      { label: "API Calls", value: "1.2M", change: "-2.4%", trend: "down" },
+                      { label: "Error Rate", value: "0.12%", change: "-18%", trend: "up" },
+                    ].map((s) => (
+                      <div key={s.label} className="bg-white rounded-xl border border-stone-200 p-3">
+                        <div className="text-[10px] text-stone-400 font-medium mb-1">{s.label}</div>
                         <div>
                           <div className="text-[20px] font-bold text-stone-800 leading-none">{s.value}</div>
                           <div className={`text-[10px] mt-1 font-medium ${s.trend === "up" ? "text-emerald-600" : "text-red-500"}`}>
                             {s.change} vs last month
                           </div>
                         </div>
-                      </SkeletonSection>
-                    </div>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                </SkeletonSection>
 
                 {/* Charts row */}
                 <div className="grid grid-cols-3 gap-2.5">
                   <div className="bg-white rounded-xl border border-stone-200 p-3">
                     <div className="text-[11px] font-semibold text-stone-700 mb-1">Traffic (7d)</div>
                     <div className="text-[9px] text-stone-400 mb-2">Requests per second</div>
-                    <SkeletonSection name="chart-traffic" loading={loading} bones={bones} setRef={setRef}>
+                    <SkeletonSection name="chart-traffic" loading={loading} bones={bones} setRef={setRef}
+                      fixture={
+                        <svg viewBox="0 0 160 40" className="w-full h-[40px]">
+                          <rect x="0" y="10" width="160" height="30" fill="#e0e0e0" rx="4" />
+                        </svg>
+                      }
+                    >
                       <svg viewBox="0 0 160 40" className="w-full h-[40px]">
                         <polyline fill="none" stroke="#6366f1" strokeWidth="2"
                           points={sparkline.map((v, i) => `${(i / (sparkline.length - 1)) * 160},${40 - (v / 100) * 40}`).join(" ")} />
@@ -363,7 +430,15 @@ export default function DemoPage() {
                   <div className="bg-white rounded-xl border border-stone-200 p-3">
                     <div className="text-[11px] font-semibold text-stone-700 mb-1">Deploys (12w)</div>
                     <div className="text-[9px] text-stone-400 mb-2">Per week</div>
-                    <SkeletonSection name="chart-deploys" loading={loading} bones={bones} setRef={setRef}>
+                    <SkeletonSection name="chart-deploys" loading={loading} bones={bones} setRef={setRef}
+                      fixture={
+                        <div className="flex items-end gap-[2px] h-[40px]">
+                          {barData.map((h, i) => (
+                            <div key={i} className="flex-1 rounded-t bg-indigo-400 opacity-80" style={{ height: `${h}%` }} />
+                          ))}
+                        </div>
+                      }
+                    >
                       <div className="flex items-end gap-[2px] h-[40px]">
                         {barData.map((h, i) => (
                           <div key={i} className="flex-1 rounded-t bg-indigo-400 opacity-80" style={{ height: `${h}%` }} />
@@ -375,7 +450,22 @@ export default function DemoPage() {
                   <div className="bg-white rounded-xl border border-stone-200 p-3">
                     <div className="text-[11px] font-semibold text-stone-700 mb-1">Traffic Split</div>
                     <div className="text-[9px] text-stone-400 mb-2">By client type</div>
-                    <SkeletonSection name="chart-split" loading={loading} bones={bones} setRef={setRef}>
+                    <SkeletonSection name="chart-split" loading={loading} bones={bones} setRef={setRef}
+                      fixture={
+                        <div className="flex items-center gap-3">
+                          <div className="w-[44px] h-[44px] rounded-full bg-stone-200 shrink-0" />
+                          <div className="flex flex-col gap-1">
+                            {donutSegments.map((seg) => (
+                              <div key={seg.label} className="flex items-center gap-1.5 text-[9px]">
+                                <div className="w-1.5 h-1.5 rounded-full" style={{ background: seg.color }} />
+                                <span className="text-stone-500">{seg.label}</span>
+                                <span className="font-semibold text-stone-700 ml-auto">{seg.pct}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      }
+                    >
                       <div className="flex items-center gap-3">
                         <svg viewBox="0 0 36 36" className="w-[44px] h-[44px] shrink-0">
                           {(() => {
@@ -427,7 +517,24 @@ export default function DemoPage() {
                         </tr>
                       </thead>
                     </table>
-                    <SkeletonSection name="api-rows" loading={loading} bones={bones} setRef={setRef}>
+                    <SkeletonSection name="user-table" loading={loading} bones={bones} setRef={setRef}
+                      fixture={
+                        <table className="w-full text-[10px]">
+                          <tbody>
+                            {tableData.map((row) => (
+                              <tr key={row.endpoint} className="border-b border-stone-50">
+                                <td className="px-3 py-1.5 font-mono text-stone-700 font-medium">{row.endpoint}</td>
+                                <td className="px-2 py-1.5"><span className="text-[8px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{row.method}</span></td>
+                                <td className="px-2 py-1.5 font-mono text-stone-500">{row.p50}</td>
+                                <td className="px-2 py-1.5 font-mono text-stone-500">{row.p99}</td>
+                                <td className="px-2 py-1.5 font-mono text-stone-500">{row.rpm}</td>
+                                <td className="px-3 py-1.5"><span className="text-stone-500 capitalize">{row.status}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      }
+                    >
                       <table className="w-full text-[10px]">
                         <tbody>
                           {tableData.map((row) => (
@@ -464,7 +571,21 @@ export default function DemoPage() {
                       <span className="text-[11px] font-semibold text-stone-700">Activity Feed</span>
                       <button className="text-[10px] text-indigo-600 font-medium">View all</button>
                     </div>
-                    <SkeletonSection name="activity" loading={loading} bones={bones} setRef={setRef}>
+                    <SkeletonSection name="activity" loading={loading} bones={bones} setRef={setRef}
+                      fixture={
+                        <div className="divide-y divide-stone-50">
+                          {notifications.map((n, i) => (
+                            <div key={i} className="flex items-start gap-2 px-3 py-2">
+                              <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 bg-stone-300" />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-[11px] text-stone-600 leading-tight">{n.text}</div>
+                                <div className="text-[9px] text-stone-400 mt-0.5">{n.time} ago</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      }
+                    >
                       <div className="divide-y divide-stone-50">
                         {notifications.map((n, i) => (
                           <div key={i} className="flex items-start gap-2 px-3 py-2">
@@ -493,7 +614,32 @@ export default function DemoPage() {
                       <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2 text-indigo-600">+ New</Button>
                     </div>
                   </div>
-                  <SkeletonSection name="kanban" loading={loading} bones={bones} setRef={setRef}>
+                  <SkeletonSection name="kanban" loading={loading} bones={bones} setRef={setRef}
+                    fixture={
+                      <div className="grid grid-cols-4 gap-2">
+                        {kanbanColumns.map((col) => (
+                          <div key={col.title} className={`rounded-lg p-1.5 ${col.color}`}>
+                            <div className="flex items-center justify-between mb-1.5 px-1">
+                              <span className="text-[10px] font-semibold text-stone-600">{col.title}</span>
+                              <span className="text-[9px] text-stone-400 bg-white rounded-full w-4 h-4 flex items-center justify-center">{col.cards.length}</span>
+                            </div>
+                            <div className="space-y-1">
+                              {col.cards.map((card) => (
+                                <div key={card.title} className="bg-white rounded-md p-2 border border-stone-100">
+                                  <div className="text-[11px] font-medium text-stone-700 mb-1">{card.title}</div>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {card.tags.map((tag) => (
+                                      <span key={tag} className="text-[8px] px-1 py-0.5 rounded-full bg-stone-100 text-stone-500">{tag}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    }
+                  >
                     <div className="grid grid-cols-4 gap-2">
                       {kanbanColumns.map((col) => (
                         <div key={col.title} className={`rounded-lg p-1.5 ${col.color}`}>
@@ -530,7 +676,21 @@ export default function DemoPage() {
                       <span className="text-[11px] font-semibold text-stone-700">Recent Files</span>
                       <button className="text-[10px] text-indigo-600 font-medium">Browse all</button>
                     </div>
-                    <SkeletonSection name="files" loading={loading} bones={bones} setRef={setRef}>
+                    <SkeletonSection name="files" loading={loading} bones={bones} setRef={setRef}
+                      fixture={
+                        <div className="divide-y divide-stone-50">
+                          {recentFiles.map((f) => (
+                            <div key={f.name} className="flex items-center gap-2.5 px-3 py-1.5">
+                              <div className="w-7 h-7 rounded-md bg-stone-100" />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-[11px] font-medium text-stone-700 truncate">{f.name}</div>
+                                <div className="text-[9px] text-stone-400">{f.size} &middot; {f.modified}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      }
+                    >
                       <div className="divide-y divide-stone-50">
                         {recentFiles.map((f) => (
                           <div key={f.name} className="flex items-center gap-2.5 px-3 py-1.5">
@@ -557,7 +717,28 @@ export default function DemoPage() {
                   <div className="flex flex-col gap-2.5">
                     <div className="bg-white rounded-xl border border-stone-200 p-3">
                       <div className="text-[11px] font-semibold text-stone-700 mb-2.5">Sprint Progress</div>
-                      <SkeletonSection name="progress" loading={loading} bones={bones} setRef={setRef}>
+                      <SkeletonSection name="progress" loading={loading} bones={bones} setRef={setRef}
+                        fixture={
+                          <div className="space-y-2">
+                            {[
+                              { label: "Frontend", pct: 78 },
+                              { label: "Backend", pct: 92 },
+                              { label: "Design", pct: 45 },
+                              { label: "QA", pct: 33 },
+                            ].map((bar) => (
+                              <div key={bar.label}>
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <span className="text-[10px] text-stone-500">{bar.label}</span>
+                                  <span className="text-[10px] font-semibold text-stone-700">{bar.pct}%</span>
+                                </div>
+                                <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full bg-stone-400" style={{ width: `${bar.pct}%` }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        }
+                      >
                         <div className="space-y-2">
                           {[
                             { label: "Frontend", pct: 78, color: "bg-indigo-500" },
@@ -581,7 +762,26 @@ export default function DemoPage() {
 
                     <div className="bg-white rounded-xl border border-stone-200 p-3">
                       <div className="text-[11px] font-semibold text-stone-700 mb-2">Server Status</div>
-                      <SkeletonSection name="servers" loading={loading} bones={bones} setRef={setRef}>
+                      <SkeletonSection name="servers" loading={loading} bones={bones} setRef={setRef}
+                        fixture={
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {[
+                              { name: "us-east-1", uptime: "99.98%" },
+                              { name: "eu-west-1", uptime: "99.95%" },
+                              { name: "ap-south-1", uptime: "98.2%" },
+                              { name: "us-west-2", uptime: "99.99%" },
+                            ].map((s) => (
+                              <div key={s.name} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-stone-100">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                <div className="min-w-0">
+                                  <div className="text-[10px] font-mono text-stone-600">{s.name}</div>
+                                  <div className="text-[8px] text-stone-400">{s.uptime}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        }
+                      >
                         <div className="grid grid-cols-2 gap-1.5">
                           {[
                             { name: "us-east-1", status: "operational", uptime: "99.98%" },

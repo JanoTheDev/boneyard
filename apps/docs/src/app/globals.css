@@ -74,7 +74,7 @@
 /* Subtle bone pulse — animates to a lighter shade of the bone color */
 @keyframes bone-pulse {
   0%, 100% { background-color: var(--bone-color); }
-  50% { background-color: color-mix(in srgb, var(--bone-color), white 30%); }
+  50% { background-color: color-mix(in srgb, var(--bone-color), white var(--bone-pulse-mix, 30%)); }
 }
 .bone-pulse {
   animation: bone-pulse 1.8s ease-in-out infinite;

@@ -144,34 +144,17 @@ export default function SSRPage() {
           <span>How it works</span>
         </div>
         <p className="text-[14px] text-[#78716c] leading-relaxed mt-4 mb-4">
-          Import a{" "}
-          <code className="text-[12px] bg-stone-100 px-1.5 py-0.5 rounded">.bones.json</code>{" "}
-          file and pass it as{" "}
-          <code className="text-[12px] bg-stone-100 px-1.5 py-0.5 rounded">initialBones</code>{" "}
-          to{" "}
+          Pass a{" "}
+          <code className="text-[12px] bg-stone-100 px-1.5 py-0.5 rounded">fixture</code>{" "}
+          prop with representative placeholder data to your{" "}
           <code className="text-[12px] bg-stone-100 px-1.5 py-0.5 rounded">&lt;Skeleton&gt;</code>.
-          The skeleton renders instantly from the pre-generated data — no registry import needed.
+          At build time, Playwright renders this fixture, snapshots the real DOM layout, and writes
+          the exact pixel positions to a{" "}
+          <code className="text-[12px] bg-stone-100 px-1.5 py-0.5 rounded">.bones.json</code>{" "}
+          file. At runtime, import that file as{" "}
+          <code className="text-[12px] bg-stone-100 px-1.5 py-0.5 rounded">initialBones</code>{" "}
+          — the skeleton renders instantly from the pre-generated data, no runtime DOM measurement needed.
         </p>
-        <CodeBlock
-          filename="app/page.tsx"
-          language="tsx"
-          code={`<span class="text-[#c084fc]">import</span> { Skeleton } <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">"boneyard-js/react"</span>
-<span class="text-[#c084fc]">import</span> bones <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">"./bones/notifications.bones.json"</span>
-
-<span class="text-[#c084fc]">export default function</span> <span class="text-[#fde68a]">Page</span>() {
-  <span class="text-[#c084fc]">const</span> { data, isLoading } = <span class="text-[#fde68a]">useFetch</span>(<span class="text-[#86efac]">"/api/notifications"</span>)
-
-  <span class="text-[#c084fc]">return</span> (
-    &lt;<span class="text-[#fde68a]">Skeleton</span>
-      <span class="text-[#93c5fd]">name</span>=<span class="text-[#86efac]">"notifications"</span>
-      <span class="text-[#93c5fd]">loading</span>={isLoading}
-      <span class="text-[#93c5fd]">initialBones</span>={bones}
-    &gt;
-      {data &amp;&amp; &lt;<span class="text-[#fde68a]">NotificationList</span> data={data} /&gt;}
-    &lt;/<span class="text-[#fde68a]">Skeleton</span>&gt;
-  )
-}`}
-        />
       </section>
 
       {/* Live examples */}
@@ -187,6 +170,34 @@ export default function SSRPage() {
           {/* Notifications */}
           <div>
             <p className="text-[12px] text-stone-400 mb-2">Notification list</p>
+            <CodeBlock
+              filename="app/page.tsx"
+              language="tsx"
+              code={`<span class="text-[#c084fc]">import</span> { Skeleton } <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">"boneyard-js/react"</span>
+<span class="text-[#c084fc]">import</span> bones <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">"./bones/notifications.bones.json"</span>
+
+<span class="text-stone-500">// Fixture — representative data for build-time snapshot</span>
+<span class="text-[#c084fc]">const</span> fixture = [
+  { name: <span class="text-[#86efac]">"Anna Kim"</span>, text: <span class="text-[#86efac]">"Merged PR #142"</span> },
+  { name: <span class="text-[#86efac]">"Tom Lee"</span>, text: <span class="text-[#86efac]">"Commented on review"</span> },
+  { name: <span class="text-[#86efac]">"Sara R."</span>, text: <span class="text-[#86efac]">"Assigned you to INFRA-301"</span> },
+]
+
+<span class="text-[#c084fc]">export default function</span> <span class="text-[#fde68a]">Page</span>() {
+  <span class="text-[#c084fc]">const</span> { data, isLoading } = <span class="text-[#fde68a]">useFetch</span>(<span class="text-[#86efac]">"/api/notifications"</span>)
+
+  <span class="text-[#c084fc]">return</span> (
+    &lt;<span class="text-[#fde68a]">Skeleton</span>
+      <span class="text-[#93c5fd]">name</span>=<span class="text-[#86efac]">"notifications"</span>
+      <span class="text-[#93c5fd]">loading</span>={isLoading}
+      <span class="text-[#93c5fd]">fixture</span>={fixture}
+      <span class="text-[#93c5fd]">initialBones</span>={bones}
+    &gt;
+      &lt;<span class="text-[#fde68a]">NotificationList</span> data={data ?? fixture} /&gt;
+    &lt;/<span class="text-[#fde68a]">Skeleton</span>&gt;
+  )
+}`}
+            />
             <div className="grid grid-cols-2 gap-4">
               <BrowserMockup url="localhost:3000">
                 <NotificationList />

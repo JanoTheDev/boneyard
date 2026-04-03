@@ -64,7 +64,7 @@ function DashboardMock() {
 function StaticHeroDemo() {
   return (
     <BrowserMockup url="localhost:3000">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+      <div className="grid grid-cols-2 gap-3 text-[11px]">
         {/* Real UI column */}
         <div>
           <div className="text-[10px] font-medium text-stone-400 uppercase tracking-wide mb-2">Real UI</div>
@@ -100,7 +100,7 @@ export default function OverviewPage() {
   };
 
   return (
-    <div className="max-w-[720px] px-6 pt-14 pb-12 space-y-10">
+    <div className="max-w-[720px] px-6 pt-14 pb-12 space-y-10 overflow-hidden">
       {/* Hero */}
       <div className="space-y-6">
         <h1 className="text-[32px] leading-[1.15] font-bold tracking-tight">
@@ -177,7 +177,7 @@ export default function OverviewPage() {
           {/* Step 1 */}
           <div className="flex gap-3">
             <div className="w-5 h-5 rounded-full bg-stone-800 text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[14px] text-[#1c1917] font-medium mb-2">Wrap your component</p>
               <div className="relative rounded-lg border border-stone-200 bg-[#1a1a1a] p-4 font-mono text-[13px] leading-relaxed overflow-x-auto">
                 <CopyButton text={`import { Skeleton } from 'boneyard-js/react'\n\n<Skeleton name="blog-card" loading={isLoading}>\n  {data && <BlogCard data={data} />}\n</Skeleton>`} />
@@ -189,7 +189,7 @@ export default function OverviewPage() {
           {/* Step 2 */}
           <div className="flex gap-3">
             <div className="w-5 h-5 rounded-full bg-stone-800 text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[14px] text-[#1c1917] font-medium mb-2">Run the CLI once to generate bones</p>
               <div className="relative rounded-lg border border-stone-200 bg-[#1a1a1a] p-4 font-mono text-[13px] leading-relaxed">
                 <CopyButton text="npx boneyard-js build" />
@@ -204,7 +204,7 @@ export default function OverviewPage() {
           {/* Step 3 */}
           <div className="flex gap-3">
             <div className="w-5 h-5 rounded-full bg-stone-800 text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[14px] text-[#1c1917] font-medium mb-2">Import the registry once</p>
               <div className="relative rounded-lg border border-stone-200 bg-[#1a1a1a] p-4 font-mono text-[13px] leading-relaxed">
                 <CopyButton text={`import './bones/registry'`} />

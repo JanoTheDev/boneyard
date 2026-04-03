@@ -452,8 +452,8 @@ function DemoCard({ demoKey, label, description, Component }: { demoKey: string;
       </div>
 
       {/* Controls */}
-      <div className="rounded-xl border border-stone-200 bg-white px-3 py-2 mt-2">
-        <div className="flex items-center gap-1.5">
+      <div className="rounded-xl border border-stone-200 bg-white px-3 py-2 mt-2 overflow-hidden">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <ColorPicker color={color} onChange={handleColorChange} />
 
           <div className="w-px h-4 bg-stone-200 mx-1" />

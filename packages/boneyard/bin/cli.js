@@ -259,6 +259,20 @@ function hashContent(html) {
   return createHash('md5').update(html).digest('hex')
 }
 
+
+// ── gotoPage logic ────────────────────────────────────────────────────────────────
+
+async function gotoPage(page, pageUrl) {
+  try {
+    await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 15_000 })
+  } catch {
+    // networkidle can timeout on heavy pages — still try to capture
+  }
+
+  if (waitMs > 0) await page.waitForTimeout(waitMs)
+}
+
+
 const skippedSkeletons = new Set()
 
 // { [skeletonName]: { breakpoints: { [width]: SkeletonResult } } }
@@ -280,14 +294,7 @@ async function capturePage(pageUrl) {
   for (const width of breakpoints) {
     await page.setViewportSize({ width, height: 900 })
 
-    try {
-      await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 15_000 })
-    } catch {
-      // networkidle can timeout on heavy pages — still try to capture
-    }
-
-    // Wait for React to render
-    if (waitMs > 0) await page.waitForTimeout(waitMs)
+    await gotoPage(page, pageUrl)
 
     // Find [data-boneyard] elements and extract bones using the real snapshotBones function
     const bones = await page.evaluate((collectHashes) => {
@@ -429,10 +436,7 @@ async function capturePage(pageUrl) {
 
 // Discover internal links from a page
 async function discoverLinks(pageUrl) {
-  try {
-    await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 15_000 })
-  } catch {}
-  if (waitMs > 0) await page.waitForTimeout(waitMs)
+  await gotoPage(page, pageUrl)
 
   const origin = new URL(pageUrl).origin
   const links = await page.evaluate((orig) => {

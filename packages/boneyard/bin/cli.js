@@ -346,8 +346,6 @@ function hashContent(html) {
 
 // ── gotoPage logic ────────────────────────────────────────────────────────────────
 
-  
-
 async function gotoPage(page, pageUrl) {
   try {
     await page.goto(pageUrl, { waitUntil: 'networkidle', timeout: 15_000 })

@@ -20,10 +20,39 @@
  *   npm install -D playwright && npx playwright install chromium
  */
 
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs'
+import { writeFileSync, mkdirSync, existsSync, readFileSync, readdirSync } from 'fs'
 import { resolve, join, dirname } from 'path'
 import http from 'http'
 import https from 'https'
+
+function loadEnvFile(filePath) {
+  if (!existsSync(filePath)) {
+    console.error(`  boneyard: env file not found: ${filePath}`)
+    process.exit(1)
+  }
+  // Path traversal check
+  const resolved = resolve(filePath)
+  const cwd = resolve(process.cwd())
+  if (!resolved.startsWith(cwd)) {
+    console.error(`  boneyard: env file must be within the project directory`)
+    process.exit(1)
+  }
+  const lines = readFileSync(filePath, 'utf-8').split('\n')
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    // Strip optional "export " prefix
+    const entry = trimmed.startsWith('export ') ? trimmed.slice(7) : trimmed
+    const eqIdx = entry.indexOf('=')
+    if (eqIdx < 0) continue
+    const key = entry.slice(0, eqIdx).trim()
+    const raw = entry.slice(eqIdx + 1).trim()
+    if (key && !(key in process.env)) {
+      process.env[key] = raw.replace(/^(['"])(.*)\1$/, '$2')
+    }
+  }
+  process.stdout.write(`  boneyard: loaded env from ${filePath}\n`)
+}
 
 const args = process.argv.slice(2)
 const command = args[0]
@@ -50,6 +79,9 @@ let cliSetBreakpoints = false
 let cliSetWait = false
 let forceRebuild = false
 let nativeMode = false
+let noScan = false
+let envFilePath = null
+let watchMode = false
 
 for (let i = 1; i < args.length; i++) {
   if (args[i] === '--out') {
@@ -65,6 +97,16 @@ for (let i = 1; i < args.length; i++) {
     forceRebuild = true
   } else if (args[i] === '--native') {
     nativeMode = true
+  } else if (args[i] === '--no-scan') {
+    noScan = true
+  } else if (args[i] === '--env-file') {
+    envFilePath = args[++i]
+    if (!envFilePath) {
+      console.error('  boneyard: --env-file requires a path argument')
+      process.exit(1)
+    }
+  } else if (args[i] === '--watch') {
+    watchMode = true
   } else if (!args[i].startsWith('--')) {
     urls.push(args[i])
   }
@@ -97,6 +139,10 @@ if (!cliSetWait && typeof config.wait === 'number') {
 // Resolve env vars in auth config
 const allowedCookieKeys = new Set(['name', 'value', 'path', 'domain', 'expires', 'httpOnly', 'secure', 'sameSite'])
 const blockedHeaders = new Set(['host', 'content-length', 'transfer-encoding', 'connection', 'upgrade'])
+
+if (envFilePath) {
+  loadEnvFile(resolve(process.cwd(), envFilePath))
+}
 
 if (config.resolveEnvVars && config.auth) {
   if (config.auth.cookies) {
@@ -294,7 +340,9 @@ try {
 console.log(`\n  \x1b[1m💀 boneyard build\x1b[0m`)
 console.log(`  \x1b[2m${'─'.repeat(50)}\x1b[0m`)
 console.log(`  \x1b[2mbreakpoints\x1b[0m  ${breakpoints.join(', ')}px`)
-console.log(`  \x1b[2moutput\x1b[0m       ${outDir}\n`)
+console.log(`  \x1b[2moutput\x1b[0m       ${outDir}`)
+if (watchMode) console.log(`  \x1b[2mwatch\x1b[0m        on`)
+console.log('')
 
 let browser
 try {
@@ -548,6 +596,114 @@ async function discoverLinks(pageUrl) {
   return [...new Set(links)]
 }
 
+// Discover routes from filesystem (Next.js, SvelteKit, Vite/Remix)
+function discoverRoutes(origin) {
+  const cwd = process.cwd()
+  const routes = []
+
+  function walkDir(dir) {
+    if (!existsSync(dir)) return []
+    const entries = []
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        // Skip dynamic route segments like [id], (groups), __tests__
+        if (entry.name.startsWith('_') || entry.name.startsWith('.')) continue
+        entries.push(...walkDir(full))
+      } else {
+        entries.push(full)
+      }
+    }
+    return entries
+  }
+
+  // Next.js App Router: app/**/page.{tsx,jsx,ts,js}
+  const appDir = existsSync(join(cwd, 'src/app')) ? join(cwd, 'src/app') : join(cwd, 'app')
+  if (existsSync(appDir)) {
+    for (const file of walkDir(appDir)) {
+      const base = file.split('/').pop()
+      if (/^page\.(tsx|jsx|ts|js)$/.test(base)) {
+        let route = dirname(file).replace(appDir, '') || '/'
+        // Skip route groups like (marketing) — flatten them
+        route = route.replace(/\/\([^)]+\)/g, '')
+        if (!route) route = '/'
+        routes.push(route)
+      }
+    }
+  }
+
+  // Next.js Pages Router: pages/**/*.{tsx,jsx,ts,js}
+  const pagesDir = existsSync(join(cwd, 'src/pages')) ? join(cwd, 'src/pages') : join(cwd, 'pages')
+  if (existsSync(pagesDir) && !existsSync(appDir)) {
+    for (const file of walkDir(pagesDir)) {
+      const base = file.split('/').pop()
+      if (!/\.(tsx|jsx|ts|js)$/.test(base)) continue
+      // Skip Next.js special files and API routes
+      const name = base.replace(/\.(tsx|jsx|ts|js)$/, '')
+      if (['_app', '_document', '_error', '404', '500'].includes(name)) continue
+      let route = file.replace(pagesDir, '').replace(/\.(tsx|jsx|ts|js)$/, '')
+      if (route.includes('/api/')) continue
+      if (route.endsWith('/index')) route = route.replace(/\/index$/, '') || '/'
+      routes.push(route)
+    }
+  }
+
+  // SvelteKit: src/routes/**/+page.svelte
+  const svelteDir = join(cwd, 'src/routes')
+  if (existsSync(svelteDir)) {
+    for (const file of walkDir(svelteDir)) {
+      if (file.endsWith('+page.svelte')) {
+        let route = dirname(file).replace(svelteDir, '') || '/'
+        route = route.replace(/\/\([^)]+\)/g, '')
+        if (!route) route = '/'
+        routes.push(route)
+      }
+    }
+  }
+
+  // Nuxt: pages/**/*.vue
+  const nuxtDir = existsSync(join(cwd, 'pages')) ? join(cwd, 'pages') : null
+  if (nuxtDir && !existsSync(appDir) && !existsSync(pagesDir)) {
+    for (const file of walkDir(nuxtDir)) {
+      if (!file.endsWith('.vue')) continue
+      let route = file.replace(nuxtDir, '').replace(/\.vue$/, '')
+      if (route.endsWith('/index')) route = route.replace(/\/index$/, '') || '/'
+      routes.push(route)
+    }
+  }
+
+  // Remix / React Router v7: app/routes/**/*.{tsx,jsx,ts,js}
+  const remixDir = join(cwd, 'app/routes')
+  if (existsSync(remixDir)) {
+    for (const file of walkDir(remixDir)) {
+      const base = file.split('/').pop()
+      if (!/\.(tsx|jsx|ts|js)$/.test(base)) continue
+      let route = file.replace(remixDir, '').replace(/\.(tsx|jsx|ts|js)$/, '')
+      // Remix flat routes: dots become slashes, _ prefix = pathless layout
+      route = route.replace(/\./g, '/')
+      if (route.endsWith('/index') || route.endsWith('/_index')) route = route.replace(/\/_?index$/, '') || '/'
+      // Skip layout routes (prefixed with _)
+      const segments = route.split('/')
+      if (segments.some(s => s.startsWith('_') && s !== '_index')) continue
+      routes.push(route)
+    }
+  }
+
+  // Convert to full URLs and deduplicate
+  const seen = new Set()
+  const urls = []
+  for (const route of routes) {
+    // Skip dynamic segments — can't visit without params
+    if (route.includes('[')) continue
+    const url = `${origin}${route}`
+    if (!seen.has(url)) {
+      seen.add(url)
+      urls.push(url)
+    }
+  }
+  return urls
+}
+
 // Crawl all pages
 const startUrl = urls[0]
 const startOrigin = new URL(startUrl).origin
@@ -566,6 +722,21 @@ for (const url of urls) {
   }
 }
 
+// Discover routes from filesystem
+if (!noScan) {
+  const fsRoutes = discoverRoutes(startOrigin)
+  let added = 0
+  for (const route of fsRoutes) {
+    if (!visited.has(route) && !toVisit.includes(route)) {
+      toVisit.push(route)
+      added++
+    }
+  }
+  if (added > 0) {
+    console.log(`  \x1b[2mFound ${added} additional route(s) from filesystem\x1b[0m\n`)
+  }
+}
+
 // Visit all discovered pages
 for (const pageUrl of toVisit) {
   if (visited.has(pageUrl)) continue
@@ -573,17 +744,21 @@ for (const pageUrl of toVisit) {
   await capturePage(pageUrl)
 }
 
-await browser.close()
+if (!watchMode) await browser.close()
 
 // ── Write files ───────────────────────────────────────────────────────────────
 
 if (Object.keys(collected).length === 0) {
-  console.error(
-    '\n  boneyard: nothing captured.\n\n' +
-    '  Make sure your components have <Skeleton name="my-component" loading={false}>\n' +
-    '  so boneyard can snapshot them before the CLI reads the registry.\n'
-  )
-  process.exit(1)
+  if (watchMode) {
+    console.log('\n  boneyard: no skeletons found on first pass — will keep watching...\n')
+  } else {
+    console.error(
+      '\n  boneyard: nothing captured.\n\n' +
+      '  Make sure your components have <Skeleton name="my-component" loading={false}>\n' +
+      '  so boneyard can snapshot them before the CLI reads the registry.\n'
+    )
+    process.exit(1)
+  }
 }
 
 // ── Validate bones before writing ────────────────────────────────────────────
@@ -610,27 +785,56 @@ mkdirSync(outputDir, { recursive: true })
 console.log(`\n  \x1b[2m${'─'.repeat(50)}\x1b[0m`)
 console.log(`  \x1b[1mWriting files\x1b[0m\n`)
 for (const [name, data] of Object.entries(collected)) {
-  const outPath = join(outputDir, `${name}.bones.json`)
+  const safeName = name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const outPath = resolve(outputDir, `${safeName}.bones.json`)
+  if (!outPath.startsWith(resolve(outputDir))) {
+    console.error(`  \x1b[31m✗\x1b[0m Skipping "${name}" — path escapes output directory`)
+    continue
+  }
   writeFileSync(outPath, JSON.stringify(data, null, 2))
   const bpCount = Object.keys(data.breakpoints).length
-  console.log(`  \x1b[32m→\x1b[0m ${name}.bones.json  \x1b[2m(${bpCount} breakpoint${bpCount !== 1 ? 's' : ''})\x1b[0m`)
+  console.log(`  \x1b[32m→\x1b[0m ${safeName}.bones.json  \x1b[2m(${bpCount} breakpoint${bpCount !== 1 ? 's' : ''})\x1b[0m`)
 }
 
 // ── Generate registry.js ─────────────────────────────────────────────────────
 const names = Object.keys(collected)
 const hasRuntimeConfig = config.color || config.darkColor || config.animate !== undefined
-const registryImportPath = nativeMode ? 'boneyard-js/native' : 'boneyard-js/react'
+// Detect framework for registry import — registerBones is always from the base
+// package (shared across all adapters), configureBoneyard needs the framework path
+function detectFramework() {
+  if (nativeMode) return 'native'
+  try {
+    const pkgPath = resolve(process.cwd(), 'package.json')
+    if (existsSync(pkgPath)) {
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+      const allDeps = { ...pkg.dependencies, ...pkg.devDependencies }
+      if (allDeps['vue'] || allDeps['nuxt']) return 'vue'
+      if (allDeps['svelte'] || allDeps['@sveltejs/kit']) return 'svelte'
+      if (allDeps['@angular/core']) return 'angular'
+    }
+  } catch {}
+  return 'react'
+}
+const detectedFramework = detectFramework()
+// registerBones lives in boneyard-js (shared). configureBoneyard is framework-specific.
+const frameworkPaths = { react: 'boneyard-js/react', vue: 'boneyard-js/vue', native: 'boneyard-js/native', svelte: 'boneyard-js/svelte', angular: 'boneyard-js/angular' }
+const registryImportPath = 'boneyard-js'
+const configImportPath = frameworkPaths[detectedFramework] || 'boneyard-js/react'
 const registryLines = [
-  ...(nativeMode ? [] : ['"use client"']),
+  ...(detectedFramework === 'react' ? ['"use client"'] : []),
   '// Auto-generated by `npx boneyard-js build` — do not edit',
-  hasRuntimeConfig
-    ? `import { registerBones, configureBoneyard } from '${registryImportPath}'`
-    : `import { registerBones } from '${registryImportPath}'`,
-  '',
 ]
+if (hasRuntimeConfig) {
+  registryLines.push(`import { registerBones } from '${registryImportPath}'`)
+  registryLines.push(`import { configureBoneyard } from '${configImportPath}'`)
+} else {
+  registryLines.push(`import { registerBones } from '${registryImportPath}'`)
+}
+registryLines.push('')
 for (const name of names) {
-  const varName = '_' + name.replace(/[^a-zA-Z0-9]/g, '_')
-  registryLines.push(`import ${varName} from './${name}.bones.json'`)
+  const safeName = name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const varName = '_' + safeName.replace(/[^a-zA-Z0-9]/g, '_')
+  registryLines.push(`import ${varName} from './${safeName}.bones.json'`)
 }
 registryLines.push('')
 
@@ -646,8 +850,9 @@ if (hasRuntimeConfig) {
 
 registryLines.push('registerBones({')
 for (const name of names) {
-  const varName = '_' + name.replace(/[^a-zA-Z0-9]/g, '_')
-  registryLines.push(`  "${name}": ${varName},`)
+  const safeName = name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const varName = '_' + safeName.replace(/[^a-zA-Z0-9]/g, '_')
+  registryLines.push(`  "${safeName}": ${varName},`)
 }
 registryLines.push('})')
 registryLines.push('')
@@ -671,12 +876,151 @@ if (nativeMode) {
 console.log(`  \x1b[2mThen just use:\x1b[0m              <Skeleton name="..." loading={isLoading}>\n`)
 
 
+// ── Watch mode ───────────────────────────────────────────────────────────────
+
+if (watchMode && !nativeMode) {
+  console.log(`  \x1b[2m👀 Watching for changes... (Ctrl+C to stop)\x1b[0m\n`)
+
+  // Store a snapshot of all bone hashes from the initial build
+  let lastSnapshot = JSON.stringify(collected)
+
+  function writeWatchResults() {
+    const writeNames = Object.keys(collected)
+    if (writeNames.length === 0) return
+
+    mkdirSync(outputDir, { recursive: true })
+    for (const [wName, wData] of Object.entries(collected)) {
+      const safeName = wName.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const wPath = resolve(outputDir, `${safeName}.bones.json`)
+      if (!wPath.startsWith(resolve(outputDir))) continue
+      writeFileSync(wPath, JSON.stringify(wData, null, 2))
+    }
+
+    const wRegistryLines = [
+      ...(detectedFramework === 'react' ? ['"use client"'] : []),
+      '// Auto-generated by `npx boneyard-js build` — do not edit',
+    ]
+    if (hasRuntimeConfig) {
+      wRegistryLines.push(`import { registerBones } from '${registryImportPath}'`)
+      wRegistryLines.push(`import { configureBoneyard } from '${configImportPath}'`)
+    } else {
+      wRegistryLines.push(`import { registerBones } from '${registryImportPath}'`)
+    }
+    wRegistryLines.push('')
+    for (const wn of writeNames) {
+      const wsafe = wn.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const wv = '_' + wsafe.replace(/[^a-zA-Z0-9]/g, '_')
+      wRegistryLines.push(`import ${wv} from './${wsafe}.bones.json'`)
+    }
+    wRegistryLines.push('')
+    if (hasRuntimeConfig) {
+      const rc = {}
+      if (config.color) rc.color = config.color
+      if (config.darkColor) rc.darkColor = config.darkColor
+      if (config.animate !== undefined) rc.animate = config.animate
+      wRegistryLines.push(`configureBoneyard(${JSON.stringify(rc)})`)
+      wRegistryLines.push('')
+    }
+    wRegistryLines.push('registerBones({')
+    for (const wn of writeNames) {
+      const wsafe = wn.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const wv = '_' + wsafe.replace(/[^a-zA-Z0-9]/g, '_')
+      wRegistryLines.push(`  "${wsafe}": ${wv},`)
+    }
+    wRegistryLines.push('})')
+    wRegistryLines.push('')
+    writeFileSync(join(outputDir, 'registry.js'), wRegistryLines.join('\n'))
+  }
+
+  async function recapture() {
+    const originalLog = console.log
+    originalLog(`  \x1b[2m⟳ Change detected — recapturing...\x1b[0m`)
+    console.log = () => {}
+    try {
+      for (const key of Object.keys(collected)) delete collected[key]
+      skippedSkeletons.clear()
+      visited.clear()
+      toVisit.length = 0
+      for (const url of urls) toVisit.push(url)
+
+      for (const watchUrl of [...toVisit]) {
+        if (visited.has(watchUrl)) continue
+        visited.add(watchUrl)
+        const links = await discoverLinks(watchUrl)
+        for (const link of links) {
+          if (!visited.has(link) && !toVisit.includes(link)) toVisit.push(link)
+        }
+      }
+      for (const watchUrl of toVisit) {
+        await capturePage(watchUrl)
+      }
+
+      const newSnapshot = JSON.stringify(collected)
+      if (newSnapshot !== lastSnapshot && Object.keys(collected).length > 0) {
+        lastSnapshot = newSnapshot
+        const ts = new Date().toLocaleTimeString()
+        const updatedNames = Object.keys(collected)
+        originalLog(`  \x1b[32m↻\x1b[0m \x1b[2m${ts}\x1b[0m Updated: ${updatedNames.join(', ')}`)
+        writeWatchResults()
+      }
+    } catch {
+      // Dev server might be restarting — ignore
+    } finally {
+      console.log = originalLog
+    }
+  }
+
+  let debounceTimer = null
+  let isRecapturing = false
+
+  function scheduleRecapture() {
+    if (isRecapturing) return
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(async () => {
+      if (isRecapturing) return
+      isRecapturing = true
+      try { await recapture() } finally { isRecapturing = false }
+    }, 2000)
+  }
+
+  // Navigate to the start page and wait for it to settle
+  await gotoPage(page, urls[0])
+
+  // NOW start listening — after initial build + navigation are done
+  // Detect HMR updates across frameworks:
+  //   Vite:    "[vite] hot updated: /src/App.vue"
+  //   Next.js: "[Fast Refresh] done" or "[HMR] connected"
+  //   Webpack: "[HMR] Updated modules:" or "[webpack] Recompiling"
+  //   Nuxt:    "[vite] hot updated"
+  //   SvelteKit: "[vite] hot updated"
+  page.on('console', (msg) => {
+    const text = msg.text()
+    if (text.includes('hot updated') ||
+        text.includes('Fast Refresh] done') ||
+        text.includes('[HMR] Updated') ||
+        text.includes('Recompiling')) {
+      scheduleRecapture()
+    }
+  })
+
+  // Graceful shutdown
+  process.on('SIGINT', async () => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    await browser.close()
+    console.log('\n  \x1b[2mWatch stopped.\x1b[0m\n')
+    process.exit(0)
+  })
+
+  // Keep process alive
+  await new Promise(() => {})
+}
+
 // ── Native scan command ──────────────────────────────────────────────────────
 
 async function runScan() {
   const scanOut = outDir
   const scanPort = 9999
-  const scanTimeout = 120000
+  const scanTimeout = watchMode ? 0 : 120000
 
   const scanOutDir = resolve(process.cwd(), scanOut)
   mkdirSync(scanOutDir, { recursive: true })
@@ -691,7 +1035,11 @@ async function runScan() {
   console.log(`  \x1b[2mSaving to: ${scanOut}\x1b[0m`)
   console.log('')
   console.log('  Open your app — bones are captured automatically.')
-  console.log('  \x1b[2mPress Ctrl+C when done, or wait for all bones.\x1b[0m')
+  if (watchMode) {
+    console.log('  \x1b[2m👀 Watch mode — stays open until you press Ctrl+C.\x1b[0m')
+  } else {
+    console.log('  \x1b[2mPress Ctrl+C when done, or wait for all bones.\x1b[0m')
+  }
   console.log('')
 
   return new Promise((resolvePromise) => {
@@ -758,8 +1106,18 @@ async function runScan() {
       resolvePromise()
     }
 
-    // Auto-finish 2s after last bone received
+    // Auto-finish 2s after last bone received (watch mode: only write if changed)
+    let lastWrittenSnapshot = ''
     function resetDoneTimer() {
+      if (watchMode) {
+        // Only write if bones actually changed — prevents Metro hot reload loop
+        const snapshot = JSON.stringify(collected)
+        if (snapshot !== lastWrittenSnapshot && Object.keys(collected).length > 0) {
+          lastWrittenSnapshot = snapshot
+          writeBones()
+        }
+        return
+      }
       if (doneTimer) clearTimeout(doneTimer)
       doneTimer = setTimeout(() => {
         server.close()
@@ -848,11 +1206,13 @@ async function runScan() {
 
     server.listen(scanPort, '0.0.0.0')
 
-    // Global timeout
-    setTimeout(() => {
-      server.close()
-      writeBones()
-    }, scanTimeout)
+    // Global timeout (disabled in watch mode)
+    if (scanTimeout > 0) {
+      setTimeout(() => {
+        server.close()
+        writeBones()
+      }, scanTimeout)
+    }
 
     // Handle Ctrl+C gracefully
     process.on('SIGINT', () => {
@@ -877,7 +1237,10 @@ function printHelp() {
     --out <dir>          Output directory             (default: ./src/bones)
     --breakpoints <bp>   Comma-separated px widths    (default: 375,768,1280)
     --wait <ms>          Extra wait after page load   (default: 800)
+    --env-file <path>    Load env vars from file      (useful for Bun runtime)
     --force              Recapture all skeletons      (skip incremental cache)
+    --no-scan            Skip filesystem route scanning (only crawl links)
+    --watch              Re-capture when your app changes (listens for HMR)
     --native             React Native mode — captures bones from a running
                          native app on device/simulator (no browser needed).
                          Registry imports from boneyard-js/native.
@@ -905,10 +1268,12 @@ function printHelp() {
     Use env[VAR_NAME] syntax to reference environment variables.
     Set resolveEnvVars: true to enable env var resolution.
     Note: env var resolution is only supported for auth config (cookies and headers).
+    Use --env-file .env.local if env vars aren't in your shell (e.g. Bun runtime).
 
   Examples:
     npx boneyard-js build
     npx boneyard-js build http://localhost:5173
+    npx boneyard-js build --watch
     npx boneyard-js build --native --out ./bones
 
   Web setup:

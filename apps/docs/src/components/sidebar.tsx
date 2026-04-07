@@ -22,6 +22,7 @@ const frameworkGuides = [
   { href: "/react-native", label: "React Native" },
   { href: "/svelte", label: "Svelte" },
   { href: "/vue", label: "Vue" },
+  { href: "/angular", label: "Angular" },
 ];
 
 const advanced = [
@@ -55,7 +56,7 @@ export function Sidebar() {
         <Link
           href={item.href}
           onClick={onClick}
-          className={`relative block py-1.5 text-[14px] transition-colors ${isActive
+          className={`relative block py-1 text-[12px] transition-colors ${isActive
             ? "text-[#1c1917] font-semibold"
             : "text-[#a8a29e] hover:text-[#78716c]"
             }`}
@@ -80,32 +81,32 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto">
-        <ul className="space-y-0.5 mb-5 pl-3">
+        <ul className="space-y-0 mb-4 pl-3">
           {gettingStarted.map((item) => renderNavItem(item, () => setOpen(false)))}
         </ul>
 
         <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider pl-3 mb-1.5">Frameworks</p>
-        <ul className="space-y-0.5 mb-5 pl-3">
+        <ul className="space-y-0 mb-4 pl-3">
           {frameworkGuides.map((item) => renderNavItem(item, () => setOpen(false)))}
         </ul>
 
         <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider pl-3 mb-1.5">Advanced</p>
-        <ul className="space-y-0.5 mb-5 pl-3">
+        <ul className="space-y-0 mb-4 pl-3">
           {advanced.map((item) => renderNavItem(item, () => setOpen(false)))}
         </ul>
 
-        <ul className="space-y-0.5 mb-6 pl-3">
+        <ul className="space-y-0 mb-4 pl-3">
           {exampleItems.map((item) => renderNavItem(item, () => setOpen(false)))}
         </ul>
 
-        <ul className="space-y-0.5 pl-3">
+        <ul className="space-y-0 pl-3">
           {externalLinks.map((item) => (
             <li key={item.href}>
               <a
                 href={item.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block py-1.5 text-[14px] text-[#a8a29e] hover:text-[#78716c] transition-colors"
+                className="block py-1 text-[12px] text-[#a8a29e] hover:text-[#78716c] transition-colors"
               >
                 {item.label}
                 <ArrowUpRightIcon size={10} className="opacity-40 inline-block ml-1" />
@@ -118,7 +119,7 @@ export function Sidebar() {
       {/* Footer */}
       <div className="py-4 space-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="text-[12px] text-[#a8a29e]">v1.6.4</span>
+          <span className="text-[12px] text-[#a8a29e]">v1.6.6</span>
           <a
             href="https://github.com/0xGF/boneyard"
             target="_blank"
@@ -189,32 +190,32 @@ export function Sidebar() {
       >
         {/* Nav items only — no logo in the dropdown */}
         <nav className="pt-3">
-          <ul className="space-y-0.5 mb-4 pl-3">
+          <ul className="space-y-0 mb-3 pl-3">
             {gettingStarted.map((item) => renderNavItem(item, () => setOpen(false)))}
           </ul>
 
           <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider pl-3 mb-1.5">Frameworks</p>
-          <ul className="space-y-0.5 mb-4 pl-3">
+          <ul className="space-y-0 mb-3 pl-3">
             {frameworkGuides.map((item) => renderNavItem(item, () => setOpen(false)))}
           </ul>
 
           <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider pl-3 mb-1.5">Advanced</p>
-          <ul className="space-y-0.5 mb-4 pl-3">
+          <ul className="space-y-0 mb-3 pl-3">
             {advanced.map((item) => renderNavItem(item, () => setOpen(false)))}
           </ul>
 
-          <ul className="space-y-0.5 mb-4 pl-3">
+          <ul className="space-y-0 mb-3 pl-3">
             {exampleItems.map((item) => renderNavItem(item, () => setOpen(false)))}
           </ul>
 
-          <ul className="space-y-0.5 pl-3">
+          <ul className="space-y-0 pl-3">
             {externalLinks.map((item) => (
               <li key={item.href}>
                 <a
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block py-1.5 text-[14px] text-[#a8a29e] hover:text-[#78716c] transition-colors"
+                  className="block py-1 text-[12px] text-[#a8a29e] hover:text-[#78716c] transition-colors"
                 >
                   {item.label}
                   <ArrowUpRightIcon size={10} className="opacity-40 inline-block ml-1" />

@@ -3,22 +3,22 @@ import { TableOfContents } from "@/components/toc";
 
 const tocItems = [
   { id: "quick-start", label: "Quick start" },
-  { id: "props", label: "Props" },
-  { id: "slots", label: "Slots" },
+  { id: "inputs", label: "Inputs" },
+  { id: "content-projection", label: "Content projection" },
   { id: "dark-mode", label: "Dark mode" },
   { id: "animations", label: "Animations" },
   { id: "global-defaults", label: "Global defaults" },
   { id: "config-file", label: "Config file" },
 ];
 
-export default function VuePage() {
+export default function AngularPage() {
   return (
     <div className="flex gap-10">
     <div className="max-w-[720px] px-6 pt-14 pb-12 space-y-12">
       <div>
-        <h1 className="text-[28px] font-bold tracking-tight mb-2">Vue</h1>
+        <h1 className="text-[28px] font-bold tracking-tight mb-2">Angular</h1>
         <p className="text-[15px] text-[#78716c] leading-relaxed">
-          Use boneyard in Nuxt, Vite, or any Vue 3 app. Same pixel-perfect skeletons, same CLI — Vue component with slots.
+          Use boneyard in any Angular 14+ app. Standalone component — no module needed. Same CLI, same pixel-perfect skeletons.
         </p>
       </div>
 
@@ -33,26 +33,30 @@ export default function VuePage() {
             <CodeBlock language="bash" code="npm install boneyard-js" />
           </div>
           <div>
-            <p className="text-[13px] font-medium text-stone-500 mb-2">2. Wrap your components</p>
-            <CodeBlock filename="App.vue" language="vue" code={`<span class="text-[#c084fc]">&lt;script setup&gt;</span>
-<span class="text-[#c084fc]">import</span> { ref } <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">'vue'</span>
-<span class="text-[#c084fc]">import</span> Skeleton <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">'boneyard-js/vue'</span>
+            <p className="text-[13px] font-medium text-stone-500 mb-2">2. Add the component</p>
+            <CodeBlock filename="app.component.ts" language="typescript" code={`<span class="text-[#c084fc]">import</span> { Component } <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">'@angular/core'</span>
+<span class="text-[#c084fc]">import</span> { SkeletonComponent } <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">'boneyard-js/angular'</span>
 <span class="text-[#c084fc]">import</span> <span class="text-[#86efac]">'./bones/registry'</span>
 
-<span class="text-[#c084fc]">const</span> loading = <span class="text-[#fde68a]">ref</span>(<span class="text-[#fbbf24]">true</span>)
-<span class="text-[#c084fc]">&lt;/script&gt;</span>
-
-<span class="text-[#c084fc]">&lt;template&gt;</span>
-  &lt;<span class="text-[#fde68a]">Skeleton</span> <span class="text-[#93c5fd]">name</span>=<span class="text-[#86efac]">"blog-card"</span> <span class="text-[#93c5fd]">:loading</span>=<span class="text-[#86efac]">"loading"</span>&gt;
-    &lt;<span class="text-[#fde68a]">BlogCard</span> /&gt;
-  &lt;/<span class="text-[#fde68a]">Skeleton</span>&gt;
-<span class="text-[#c084fc]">&lt;/template&gt;</span>`} />
+@<span class="text-[#fde68a]">Component</span>({
+  <span class="text-[#93c5fd]">selector</span>: <span class="text-[#86efac]">'app-root'</span>,
+  <span class="text-[#93c5fd]">standalone</span>: <span class="text-[#fbbf24]">true</span>,
+  <span class="text-[#93c5fd]">imports</span>: [SkeletonComponent],
+  <span class="text-[#93c5fd]">template</span>: \`
+    &lt;<span class="text-[#fde68a]">boneyard-skeleton</span> <span class="text-[#93c5fd]">name</span>=<span class="text-[#86efac]">"blog-card"</span> <span class="text-[#93c5fd]">[loading]</span>=<span class="text-[#86efac]">"isLoading"</span>&gt;
+      &lt;<span class="text-[#fde68a]">app-blog-card</span> /&gt;
+    &lt;/<span class="text-[#fde68a]">boneyard-skeleton</span>&gt;
+  \`
+})
+<span class="text-[#c084fc]">export class</span> <span class="text-[#fde68a]">AppComponent</span> {
+  isLoading = <span class="text-[#fbbf24]">true</span>
+}`} />
           </div>
           <div>
             <p className="text-[13px] font-medium text-stone-500 mb-2">3. Generate bones</p>
             <CodeBlock language="bash" code="npx boneyard-js build" />
             <p className="text-[13px] text-stone-400 mt-2">
-              Auto-detects your Vite/Nuxt dev server and captures all named skeletons.
+              Auto-detects your Angular dev server and captures all named skeletons.
             </p>
           </div>
           <div>
@@ -61,7 +65,7 @@ export default function VuePage() {
 <span class="text-[#c084fc]">import</span> <span class="text-[#86efac]">'./bones/registry'</span>`} />
             <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <p className="text-[13px] text-amber-700">
-                <strong className="text-amber-800">This import is required.</strong> Without it, skeletons won&apos;t render — the Skeleton component
+                <strong className="text-amber-800">This import is required.</strong> Without it, skeletons won&apos;t render — the component
                 needs the registry to resolve bone data by name.
               </p>
             </div>
@@ -69,16 +73,16 @@ export default function VuePage() {
         </div>
       </section>
 
-      {/* Props */}
+      {/* Inputs */}
       <section>
-        <div className="section-divider" id="props">
-          <span>Props</span>
+        <div className="section-divider" id="inputs">
+          <span>Inputs</span>
         </div>
         <div className="mt-4 rounded-lg border border-stone-200 overflow-hidden">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-stone-50 border-b border-stone-200">
-                <th className="text-left px-4 py-2 font-medium text-stone-700">Prop</th>
+                <th className="text-left px-4 py-2 font-medium text-stone-700">Input</th>
                 <th className="text-left px-4 py-2 font-medium text-stone-700">Type</th>
                 <th className="text-left px-4 py-2 font-medium text-stone-700">Default</th>
                 <th className="text-left px-4 py-2 font-medium text-stone-700">Description</th>
@@ -88,7 +92,7 @@ export default function VuePage() {
               <tr className="border-b border-stone-100">
                 <td className="px-4 py-2 font-mono text-stone-800">loading</td>
                 <td className="px-4 py-2">boolean</td>
-                <td className="px-4 py-2">—</td>
+                <td className="px-4 py-2">false</td>
                 <td className="px-4 py-2">Show skeleton or children</td>
               </tr>
               <tr className="border-b border-stone-100">
@@ -122,7 +126,7 @@ export default function VuePage() {
                 <td className="px-4 py-2">Animation style (also accepts true/false)</td>
               </tr>
               <tr className="border-b border-stone-100">
-                <td className="px-4 py-2 font-mono text-stone-800">class</td>
+                <td className="px-4 py-2 font-mono text-stone-800">cssClass</td>
                 <td className="px-4 py-2">string</td>
                 <td className="px-4 py-2">—</td>
                 <td className="px-4 py-2">CSS class on the container</td>
@@ -138,50 +142,46 @@ export default function VuePage() {
         </div>
       </section>
 
-      {/* Slots */}
+      {/* Content projection */}
       <section>
-        <div className="section-divider" id="slots">
-          <span>Slots</span>
+        <div className="section-divider" id="content-projection">
+          <span>Content projection</span>
         </div>
         <div className="mt-4 rounded-lg border border-stone-200 overflow-hidden">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-stone-50 border-b border-stone-200">
-                <th className="text-left px-4 py-2 font-medium text-stone-700">Slot</th>
+                <th className="text-left px-4 py-2 font-medium text-stone-700">Selector</th>
                 <th className="text-left px-4 py-2 font-medium text-stone-700">Description</th>
               </tr>
             </thead>
             <tbody className="text-[#78716c]">
               <tr className="border-b border-stone-100">
-                <td className="px-4 py-2 font-mono text-stone-800">default</td>
+                <td className="px-4 py-2 font-mono text-stone-800">(default)</td>
                 <td className="px-4 py-2">Your real component — shown when not loading</td>
               </tr>
               <tr className="border-b border-stone-100">
-                <td className="px-4 py-2 font-mono text-stone-800">#fallback</td>
+                <td className="px-4 py-2 font-mono text-stone-800">[fallback]</td>
                 <td className="px-4 py-2">Shown when loading but no bones are available</td>
               </tr>
               <tr>
-                <td className="px-4 py-2 font-mono text-stone-800">#fixture</td>
-                <td className="px-4 py-2">Mock content for CLI capture (dev only, never in production)</td>
+                <td className="px-4 py-2 font-mono text-stone-800">[fixture]</td>
+                <td className="px-4 py-2">Mock content for CLI capture (dev only)</td>
               </tr>
             </tbody>
           </table>
         </div>
         <div className="mt-4">
-          <CodeBlock language="vue" code={`&lt;<span class="text-[#fde68a]">Skeleton</span> <span class="text-[#93c5fd]">name</span>=<span class="text-[#86efac]">"dashboard"</span> <span class="text-[#93c5fd]">:loading</span>=<span class="text-[#86efac]">"loading"</span>&gt;
+          <CodeBlock language="html" code={`&lt;<span class="text-[#fde68a]">boneyard-skeleton</span> <span class="text-[#93c5fd]">name</span>=<span class="text-[#86efac]">"dashboard"</span> <span class="text-[#93c5fd]">[loading]</span>=<span class="text-[#86efac]">"isLoading"</span>&gt;
   <span class="text-stone-500">&lt;!-- Default: your real component --&gt;</span>
-  &lt;<span class="text-[#fde68a]">Dashboard</span> <span class="text-[#93c5fd]">:data</span>=<span class="text-[#86efac]">"data"</span> /&gt;
+  &lt;<span class="text-[#fde68a]">app-dashboard</span> <span class="text-[#93c5fd]">[data]</span>=<span class="text-[#86efac]">"data"</span> /&gt;
 
   <span class="text-stone-500">&lt;!-- Fixture: mock content for CLI bone capture --&gt;</span>
-  &lt;<span class="text-[#c084fc]">template</span> <span class="text-[#93c5fd]">#fixture</span>&gt;
-    &lt;<span class="text-[#fde68a]">Dashboard</span> <span class="text-[#93c5fd]">:data</span>=<span class="text-[#86efac]">"mockData"</span> /&gt;
-  &lt;/<span class="text-[#c084fc]">template</span>&gt;
+  &lt;<span class="text-[#fde68a]">app-dashboard</span> fixture <span class="text-[#93c5fd]">[data]</span>=<span class="text-[#86efac]">"mockData"</span> /&gt;
 
   <span class="text-stone-500">&lt;!-- Fallback: shown if no bones generated yet --&gt;</span>
-  &lt;<span class="text-[#c084fc]">template</span> <span class="text-[#93c5fd]">#fallback</span>&gt;
-    &lt;<span class="text-[#fde68a]">p</span>&gt;Loading...&lt;/<span class="text-[#fde68a]">p</span>&gt;
-  &lt;/<span class="text-[#c084fc]">template</span>&gt;
-&lt;/<span class="text-[#fde68a]">Skeleton</span>&gt;`} />
+  &lt;<span class="text-[#fde68a]">p</span> fallback&gt;Loading...&lt;/<span class="text-[#fde68a]">p</span>&gt;
+&lt;/<span class="text-[#fde68a]">boneyard-skeleton</span>&gt;`} />
         </div>
       </section>
 
@@ -231,17 +231,6 @@ export default function VuePage() {
             </tbody>
           </table>
         </div>
-        <div className="mt-4">
-          <CodeBlock language="vue" code={`<span class="text-stone-500">&lt;!-- Shimmer --&gt;</span>
-&lt;<span class="text-[#fde68a]">Skeleton</span> <span class="text-[#93c5fd]">name</span>=<span class="text-[#86efac]">"card"</span> <span class="text-[#93c5fd]">:loading</span>=<span class="text-[#86efac]">"true"</span> <span class="text-[#93c5fd]">animate</span>=<span class="text-[#86efac]">"shimmer"</span>&gt;
-  &lt;<span class="text-[#fde68a]">Card</span> /&gt;
-&lt;/<span class="text-[#fde68a]">Skeleton</span>&gt;
-
-<span class="text-stone-500">&lt;!-- Custom colors --&gt;</span>
-&lt;<span class="text-[#fde68a]">Skeleton</span> <span class="text-[#93c5fd]">name</span>=<span class="text-[#86efac]">"card"</span> <span class="text-[#93c5fd]">:loading</span>=<span class="text-[#86efac]">"true"</span> <span class="text-[#93c5fd]">color</span>=<span class="text-[#86efac]">"#fca5a5"</span> <span class="text-[#93c5fd]">dark-color</span>=<span class="text-[#86efac]">"#7f1d1d"</span>&gt;
-  &lt;<span class="text-[#fde68a]">Card</span> /&gt;
-&lt;/<span class="text-[#fde68a]">Skeleton</span>&gt;`} />
-        </div>
       </section>
 
       {/* Global defaults */}
@@ -252,7 +241,7 @@ export default function VuePage() {
         <p className="text-[14px] text-[#78716c] leading-relaxed mt-4 mb-4">
           Set defaults for all skeletons with <code className="text-[12px] bg-stone-100 px-1 py-0.5 rounded">configureBoneyard()</code>:
         </p>
-        <CodeBlock language="ts" code={`<span class="text-[#c084fc]">import</span> { configureBoneyard } <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">'boneyard-js/vue'</span>
+        <CodeBlock language="typescript" code={`<span class="text-[#c084fc]">import</span> { configureBoneyard } <span class="text-[#c084fc]">from</span> <span class="text-[#86efac]">'boneyard-js/angular'</span>
 
 <span class="text-[#fde68a]">configureBoneyard</span>({
   <span class="text-[#93c5fd]">color</span>: <span class="text-[#86efac]">'#e5e5e5'</span>,
@@ -260,7 +249,7 @@ export default function VuePage() {
   <span class="text-[#93c5fd]">animate</span>: <span class="text-[#86efac]">'shimmer'</span>,
 })`} />
         <p className="text-[13px] text-stone-400 mt-2">
-          Per-component props override global defaults.
+          Per-component inputs override global defaults.
         </p>
       </section>
 

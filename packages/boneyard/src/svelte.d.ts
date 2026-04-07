@@ -1,13 +1,15 @@
 import type { Component, Snippet } from 'svelte'
 import type { ResponsiveBones, SkeletonResult, SnapshotConfig } from './types.js'
 
+export type AnimationStyle = 'pulse' | 'shimmer' | 'solid' | boolean
+
 export interface SkeletonProps {
   loading: boolean
   name?: string
   initialBones?: SkeletonResult | ResponsiveBones
   color?: string
   darkColor?: string
-  animate?: boolean
+  animate?: AnimationStyle
   class?: string
   className?: string
   fallback?: Snippet

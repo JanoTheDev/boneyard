@@ -349,6 +349,71 @@ function SkeletonRenderer({
 // Which demo keys actually have variant data (cycling is only useful for these)
 const HAS_VARIANTS = new Set(["blog", "product"]);
 
+// ── Showcase sequence steps ──
+interface ShowcaseStep {
+  label: string
+  apply: (s: {
+    setColor: (c: string) => void
+    setTexture: (t: Texture) => void
+    setDark: (d: boolean) => void
+    setStaggerVal: (v: number) => void
+    setTransitionVal: (v: number) => void
+    setShowContent: (v: boolean) => void
+    setSkeletonKey: (fn: (k: number) => number) => void
+  }) => void
+  durationMs: number
+}
+
+const SHOWCASE_STEPS: ShowcaseStep[] = [
+  {
+    label: "Pulse animation",
+    durationMs: 2200,
+    apply: (s) => {
+      s.setShowContent(false); s.setTexture("pulse"); s.setDark(false);
+      s.setColor("#e0e0e0"); s.setStaggerVal(0); s.setTransitionVal(0);
+      s.setSkeletonKey(k => k + 1);
+    },
+  },
+  {
+    label: "Stagger entrance",
+    durationMs: 2500,
+    apply: (s) => { s.setStaggerVal(100); s.setSkeletonKey(k => k + 1); },
+  },
+  {
+    label: "Shimmer texture",
+    durationMs: 2500,
+    apply: (s) => { s.setTexture("shimmer"); s.setStaggerVal(0); s.setSkeletonKey(k => k + 1); },
+  },
+  {
+    label: "Dark mode",
+    durationMs: 2200,
+    apply: (s) => { s.setDark(true); s.setColor("#2a2a2a"); },
+  },
+  {
+    label: "Stagger + dark",
+    durationMs: 2500,
+    apply: (s) => { s.setStaggerVal(80); s.setTexture("pulse"); s.setSkeletonKey(k => k + 1); },
+  },
+  {
+    label: "Transition fade out",
+    durationMs: 2200,
+    apply: (s) => { s.setTransitionVal(400); s.setStaggerVal(0); s.setShowContent(true); },
+  },
+  {
+    label: "Back to skeleton",
+    durationMs: 2200,
+    apply: (s) => { s.setShowContent(false); s.setSkeletonKey(k => k + 1); },
+  },
+  {
+    label: "Light mode reset",
+    durationMs: 2000,
+    apply: (s) => {
+      s.setDark(false); s.setColor("#e0e0e0"); s.setTransitionVal(0);
+      s.setTexture("pulse"); s.setSkeletonKey(k => k + 1);
+    },
+  },
+];
+
 function DemoCard({ demoKey, label, description, Component }: { demoKey: string; label: string; description: string; Component: () => React.JSX.Element }) {
   const uiRef = useRef<HTMLDivElement>(null);
   // Start null to avoid SSR/hydration mismatch; seeded in useEffect after mount
@@ -362,6 +427,35 @@ function DemoCard({ demoKey, label, description, Component }: { demoKey: string;
   const [transitionVal, setTransitionVal] = useState(0);
   const [showContent, setShowContent] = useState(false);
   const [skeletonKey, setSkeletonKey] = useState(0);
+
+  // Showcase auto-play
+  const [showcaseActive, setShowcaseActive] = useState(false);
+  const [showcaseStep, setShowcaseStep] = useState(-1);
+  const showcaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!showcaseActive) {
+      if (showcaseTimerRef.current) clearTimeout(showcaseTimerRef.current);
+      setShowcaseStep(-1);
+      return;
+    }
+    let step = 0;
+    const setters = { setColor, setTexture, setDark, setStaggerVal, setTransitionVal, setShowContent, setSkeletonKey };
+
+    function runStep() {
+      if (step >= SHOWCASE_STEPS.length) {
+        step = 0; // loop
+      }
+      setShowcaseStep(step);
+      SHOWCASE_STEPS[step].apply(setters);
+      showcaseTimerRef.current = setTimeout(() => {
+        step++;
+        runStep();
+      }, SHOWCASE_STEPS[step].durationMs);
+    }
+    runStep();
+    return () => { if (showcaseTimerRef.current) clearTimeout(showcaseTimerRef.current); };
+  }, [showcaseActive]);
   const handleDarkToggle = () => {
     setDark((d) => {
       const next = !d;
@@ -586,7 +680,37 @@ function DemoCard({ demoKey, label, description, Component }: { demoKey: string;
           >
             Reload
           </button>
+
+          <div className="w-px h-4 bg-stone-200" />
+
+          <button
+            onClick={() => setShowcaseActive(a => !a)}
+            className={`h-7 px-2.5 rounded-lg text-[11px] font-medium transition-colors ${
+              showcaseActive
+                ? "bg-stone-800 text-white"
+                : "bg-stone-100 text-stone-500 hover:bg-stone-200/70"
+            }`}
+          >
+            {showcaseActive ? "Stop" : "Showcase"}
+          </button>
         </div>
+
+        {/* Showcase progress */}
+        {showcaseActive && showcaseStep >= 0 && (
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex gap-1">
+              {SHOWCASE_STEPS.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    i === showcaseStep ? "w-4 bg-stone-700" : i < showcaseStep ? "w-1.5 bg-stone-400" : "w-1.5 bg-stone-200"
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-[10px] text-stone-400 font-mono">{SHOWCASE_STEPS[showcaseStep].label}</span>
+          </div>
+        )}
       </div>
 
       {/* Auto-extracted bones JSON */}

@@ -94,6 +94,11 @@ export default function CliPage() {
                 <td className="px-4 py-2">—</td>
                 <td className="px-4 py-2">Skip filesystem route scanning (only crawl links)</td>
               </tr>
+              <tr className="border-b border-stone-100">
+                <td className="px-4 py-2 font-mono text-stone-800">--cdp &lt;port&gt;</td>
+                <td className="px-4 py-2">—</td>
+                <td className="px-4 py-2">Connect to existing Chrome via debug port (reuses cookies/auth)</td>
+              </tr>
               <tr>
                 <td className="px-4 py-2 font-mono text-stone-800">--env-file</td>
                 <td className="px-4 py-2">—</td>
@@ -126,7 +131,10 @@ npx boneyard-js build --force
 npx boneyard-js build --watch
 
 <span class="text-stone-500"># React Native</span>
-npx boneyard-js build --native --out ./bones`} />
+npx boneyard-js build --native --out ./bones
+
+<span class="text-stone-500"># Use existing Chrome (reuses cookies, auth, extensions)</span>
+npx boneyard-js build --cdp 9222`} />
         </div>
       </section>
 
@@ -175,10 +183,15 @@ npx boneyard-js build --native --out ./bones`} />
                 <td className="px-4 py-2">auto</td>
                 <td className="px-4 py-2">Registry import (auto-detects vue/svelte/react)</td>
               </tr>
-              <tr>
+              <tr className="border-b border-stone-100">
                 <td className="px-4 py-2 font-mono text-stone-800">skipInitial</td>
                 <td className="px-4 py-2">false</td>
                 <td className="px-4 py-2">Skip capture on server start</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2 font-mono text-stone-800">cdp</td>
+                <td className="px-4 py-2">—</td>
+                <td className="px-4 py-2">Chrome debug port (reuses existing browser session)</td>
               </tr>
             </tbody>
           </table>

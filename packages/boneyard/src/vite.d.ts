@@ -11,6 +11,8 @@ export interface BoneyardPluginOptions {
   framework?: 'react' | 'vue' | 'svelte'
   /** Skip initial capture on server start (default: false) */
   skipInitial?: boolean
+  /** Connect to existing Chrome via debug port instead of launching Playwright */
+  cdp?: number
 }
 
 export declare function boneyardPlugin(options?: BoneyardPluginOptions): Plugin

@@ -31,6 +31,8 @@ export interface BoneyardPluginOptions {
   framework?: 'react' | 'vue' | 'svelte'
   /** Skip initial capture on server start (default: false) */
   skipInitial?: boolean
+  /** Connect to existing Chrome via debug port instead of launching Playwright */
+  cdp?: number
 }
 
 export function boneyardPlugin(options: BoneyardPluginOptions = {}): Plugin {
@@ -70,11 +72,19 @@ export function boneyardPlugin(options: BoneyardPluginOptions = {}): Plugin {
     return 'react'
   }
 
+  const cdpPort = options.cdp
+
   async function ensureBrowser() {
     if (browser && page) return
     const pw = await import('playwright')
-    browser = await pw.chromium.launch()
-    page = await browser.newPage()
+    if (cdpPort) {
+      browser = await pw.chromium.connectOverCDP(`http://localhost:${cdpPort}`)
+      const context = await browser.newContext()
+      page = await context.newPage()
+    } else {
+      browser = await pw.chromium.launch()
+      page = await browser.newPage()
+    }
     await page.addInitScript(() => {
       (window as any).__BONEYARD_BUILD = true
     })

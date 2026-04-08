@@ -143,6 +143,7 @@ All frameworks output the same `.bones.json` format — cross-platform compatibl
 | `--watch` | — | Re-capture on HMR changes |
 | `--native` | — | React Native device scanning |
 | `--no-scan` | — | Skip filesystem route scanning |
+| `--cdp` | — | Connect to existing Chrome via debug port |
 | `--env-file` | — | Load env vars from file |
 
 ## Props

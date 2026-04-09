@@ -88,7 +88,7 @@
   "scripts": {
     "build": "tsc && npm run copy-svelte && npm run copy-native && npm run copy-vue && npm run copy-angular",
     "copy-svelte": "cp src/Skeleton.svelte dist/Skeleton.svelte && cp src/svelte.d.ts dist/svelte.d.ts",
-    "copy-native": "cp src/native.tsx dist/native.tsx && cp src/react-native.tsx dist/react-native.tsx && cp src/native-scan.tsx dist/native-scan.tsx",
+    "copy-native": "cp src/native.tsx dist/native.tsx && cp src/native.d.ts dist/native.d.ts && cp src/react-native.tsx dist/react-native.tsx && cp src/native-scan.tsx dist/native-scan.tsx",
     "copy-vue": "cp src/Skeleton.vue dist/Skeleton.vue && cp src/vue.d.ts dist/vue.d.ts",
     "copy-angular": "cp src/angular.ts dist/angular.ts && cp src/angular.d.ts dist/angular.d.ts",
     "benchmark": "bun run scripts/benchmark-layout.ts",

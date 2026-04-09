@@ -87,15 +87,17 @@ Re-run whenever your layout changes to regenerate. The CLI uses incremental buil
 
 **Next.js App Router:** The generated \`registry.js\` includes \`"use client"\` automatically. \`<Skeleton>\` uses hooks — add \`"use client"\` to any file that imports it.
 
-## Excluding elements
+## Excluding elements from capture
 
-Add \`data-no-skeleton\` to any element you want to skip:
+Add \`data-no-skeleton\` to any element you want to exclude from bone capture:
 
 \`\`\`tsx
 <nav data-no-skeleton>
-  {/* This stays visible during loading */}
+  {/* No bone will be generated for this element */}
 </nav>
 \`\`\`
+
+**Note:** This only affects the capture/snapshot phase — excluded elements won't have bones drawn over them, but they are still hidden at runtime along with all other slot content (via \`visibility: hidden\`). To keep an element visible during loading, place it **outside** the \`<Skeleton>\` wrapper.
 
 Or use \`snapshotConfig\` for more control:
 
@@ -262,6 +264,21 @@ Runtime defaults (\`color\`, \`darkColor\`, \`animate\`) are automatically inclu
 - \`boneyard-js/svelte\` — Skeleton component, registerBones
 - \`boneyard-js/vue\` — Skeleton component, registerBones, configureBoneyard
 - \`boneyard-js/angular\` — SkeletonComponent, registerBones, configureBoneyard
+- \`boneyard-js/vite\` — boneyardPlugin() Vite plugin for auto-capture
+
+## Vite plugin
+
+For Vite-based projects (Vue, Svelte, React with Vite), add the plugin to your vite.config.ts — no CLI needed:
+
+\`\`\`ts
+import { boneyardPlugin } from 'boneyard-js/vite'
+
+export default defineConfig({
+  plugins: [boneyardPlugin()]
+})
+\`\`\`
+
+Captures bones on dev server start and re-captures on every HMR update. Options: \`out\`, \`breakpoints\`, \`wait\`, \`framework\`, \`skipInitial\`.
 `;
 
 export default function AgentPage() {
@@ -275,7 +292,7 @@ export default function AgentPage() {
   };
 
   return (
-    <div className="max-w-[720px] px-6 pt-14 pb-12 space-y-10">
+    <div className="w-full max-w-[720px] px-6 pt-14 pb-12 space-y-10">
       <div>
         <h1 className="text-[28px] font-bold tracking-tight mb-2">Agent</h1>
         <p className="text-[15px] text-[#78716c]">
